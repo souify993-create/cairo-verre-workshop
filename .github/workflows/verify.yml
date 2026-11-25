@@ -4,6 +4,10 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+concurrency:
+  group: cairo-verre-verify-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
     runs-on: ubuntu-latest
