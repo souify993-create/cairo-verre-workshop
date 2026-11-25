@@ -30,20 +30,20 @@ const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency
 const remainingConfirmed=(order:StoredOrder)=>Math.max(0,order.totalTTC-order.payments.filter(p=>p.status==="confirmed").reduce((sum,p)=>sum+p.amount,0)+order.refunds.filter(r=>r.status==="confirmed").reduce((sum,r)=>sum+r.amount,0));
 function normalizeOrderNumbers(drafts: Draft[], orders: StoredOrder[]) {
  const entries=[...drafts.map(item=>({id:item.id,createdAt:item.createdAt,number:item.number})),...orders.map(item=>({id:item.id,createdAt:item.createdAt,number:item.number}))];
- const used=entries.map(item=>/^C#(\d+)$/.exec(item.number)).filter(Boolean).map(match=>Number(match![1]));
+ const used=entries.map(item=>/^(?:C#|#C)(\\d+)$/.exec(item.number)).filter(Boolean).map(match=>Number(match![1]));
  let next=Math.max(0,...used)+1;
  const numbers=new Map<string,string>();
  for(const item of [...entries].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))){
-  const match=/^C#(\d+)$/.exec(item.number);
-  numbers.set(item.id,match?item.number:`C#${next++}`);
+  const match=/^(?:C#|#C)(\\d+)$/.exec(item.number);
+  numbers.set(item.id,match?`#C${match[1]}`:`#C${next++}`);
  }
  const nextDrafts=drafts.map(item=>({...item,number:numbers.get(item.id)||item.number}));
  const nextOrders=orders.map(item=>({...item,number:numbers.get(item.id)||item.number}));
  return {drafts:nextDrafts,orders:nextOrders,changed:nextDrafts.some((item,i)=>item.number!==drafts[i].number)||nextOrders.some((item,i)=>item.number!==orders[i].number)};
 }
 function nextOrderNumber(drafts: Draft[], orders: StoredOrder[]) {
- const values=[...drafts,...orders].map(item=>Number(/^C#(\d+)$/.exec(item.number)?.[1]||0));
- return `C#${Math.max(0,...values)+1}`;
+ const values=[...drafts,...orders].map(item=>Number(/^(?:C#|#C)(\\d+)$/.exec(item.number)?.[1]||0));
+ return `#C${Math.max(0,...values)+1}`;
 }
 
 export default function Home(){
@@ -269,7 +269,7 @@ export default function Home(){
   <div className="panel-heading"><div><h3>Liste des commandes</h3><p>Toutes les commandes et tous les brouillons, classés par date de création.</p></div><span className="draft-count">{orderRows.length} commande(s)</span></div>
   <div className="form-grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:14}}>
    <div className="order-filter-bar" role="group" aria-label="Filtrer les commandes">{([{value:"draft",label:"Brouillon"},{value:"delivered",label:"Livrée"},{value:"cancelled",label:"Annulée"},{value:"all",label:"Tous"}] as const).map(item=><button key={item.value} className={"order-filter "+item.value+(orderFilter===item.value?" active":"")} onClick={()=>{setOrderFilter(item.value);setOrderPage(1);}}>{item.label}</button>)}</div>
-   <label className="field"><span>Recherche</span><input className="text-input" value={orderSearch} onChange={e=>{setOrderSearch(e.target.value);setOrderPage(1);}} placeholder="N° commande C#… ou client"/></label>
+   <label className="field"><span>Recherche</span><input className="text-input" value={orderSearch} onChange={e=>{setOrderSearch(e.target.value);setOrderPage(1);}} placeholder="N° commande #C… ou client"/></label>
   </div>
   {visibleOrderRows.length?visibleOrderRows.map(row=>row.kind==="draft"?<div className="saved-draft" key={row.id}>
    <div><strong>{row.number} · {row.customer||"Client non renseigné"}</strong><span>Brouillon · {new Date(row.createdAt).toLocaleDateString("fr-FR")} · Total {money(row.total)}</span></div>
