@@ -23,7 +23,7 @@ test("workshop store reads valid orders and accessory purchases", () => {
 test("workshop store rejects unsupported versions and malformed JSON", () => {
   assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [], customers: [] });
   assert.deepEqual(decodeWorkshopStore(JSON.stringify({ version: 2, orders: [delivered], accessoryPurchases: [] })),
-    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [] });
+    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [], customers: [] });
 });
 
 test("workshop store filters malformed order records", () => {
@@ -54,6 +54,12 @@ test("older local stores remain readable without supplier invoice data", () => {
   assert.deepEqual(decoded.payrollWeeks, []);
 });
 
+
+test("customer directory records persist and malformed customer records are ignored", () => {
+  const customer = { id: "customer-1", name: "Cairo Client", phone: "0612345678", ice: "001234567000045", rc: "12345" };
+  const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [], customers: [customer, { ...customer, name: "" }, { ...customer, phone: 7 }] }));
+  assert.deepEqual(decoded.customers, [customer]);
+});
 
 test("older payment records without cash dates remain valid and are not assigned invented dates", () => {
   const oldOrder = { ...delivered, payments: [{ id: "old-p", method: "Espèces", amount: 20, status: "confirmed" }] };
