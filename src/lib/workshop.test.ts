@@ -16,7 +16,7 @@ test("draft conversion is inert until explicit delivery", () => {
   const order = orderFromDraft(draft);
   assert.equal(order.status, "draft");
   assert.deepEqual(deriveLedger([order], []).cashMovements, []);
-  assert.equal(deriveLedger([order], []).stock[0].consumed, 0);
+  assert.equal(deriveLedger([order], [{ accessoryId: "poignee", label: "Poignée", quantity: 5 }]).stock[0].consumed, 0);
 });
 
 test("delivery requires a customer and creates no imaginary payment", () => {
@@ -91,7 +91,7 @@ test("a cheque refund stays pending until encashment and respects confirmed rece
   order = confirmRefund(order, "cheque-refund", "2026-11-26T12:00:00.000Z");
   const outflows = deriveLedger([order], []).cashMovements.filter(m => m.direction === "Sortie");
   assert.equal(outflows.length, 2);
-  assert.equal(outflows.find(m => m.orderId === "cheque-refund")?.date, "2026-11-26");
+  assert.equal(outflows.find(m => m.kind === "Remboursement" && m.method === "Chèque")?.date, "2026-11-26");
 });
 
 test("only pending cheques can be confirmed as collected", () => {
