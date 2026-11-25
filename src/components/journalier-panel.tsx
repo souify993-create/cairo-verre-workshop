@@ -8,11 +8,11 @@ const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency
 const methods:PaymentMethod[]=["Espèces","Virement","Chèque"];
 const today=()=>{const now=new Date();return [now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");};
 
-export function JournalierPanel({movements,expenses,employees,payrollWeeks}:{movements:CashMovement[];expenses:ExpenseRecord[];employees:Employee[];payrollWeeks:PayrollWeek[]}){
+export function JournalierPanel({movements,scheduledMovements=[],expenses,employees,payrollWeeks}:{movements:CashMovement[];scheduledMovements?:CashMovement[];expenses:ExpenseRecord[];employees:Employee[];payrollWeeks:PayrollWeek[]}){
  const [date,setDate]=useState(today);
  const dailyExpenses=useMemo(()=>deriveExpenseMovements(expenses,date),[expenses,date]);
  const payrollMovements=useMemo(()=>derivePayrollMovements(payrollWeeks,employees),[payrollWeeks,employees]);
- const allMovements=useMemo(()=>[...movements,...dailyExpenses,...payrollMovements],[movements,dailyExpenses,payrollMovements]);
+ const allMovements=useMemo(()=>[...movements,...scheduledMovements,...dailyExpenses,...payrollMovements],[movements,scheduledMovements,dailyExpenses,payrollMovements]);
  const dated=useMemo(()=>allMovements.filter(m=>m.date===date),[allMovements,date]);
  const undated=useMemo(()=>allMovements.filter(m=>!m.date),[allMovements]);
  const incoming=dated.filter(m=>m.direction==="Entrée").reduce((s,m)=>s+m.amount,0);
