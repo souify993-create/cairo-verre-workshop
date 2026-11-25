@@ -104,3 +104,9 @@ test("supplier invoice later payments persist and cannot exceed invoice total",(
  const valid=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[invoice]}));assert.equal(valid.supplierInvoices.length,1);assert.equal(valid.supplierInvoices[0].payments?.[0].amount,14);
  const over=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[{...invoice,payments:[{...invoice.payments[0],amount:15}]}]}));assert.equal(over.supplierInvoices.length,0);
 });
+
+
+test("legacy supplier payments without status remain readable; legacy cheques stay pending",()=>{
+ const invoice={id:"legacy-pay",supplier:"Fournisseur D",invoiceNumber:"FD-1",date:"2026-11-25",category:"accessory",lines:[{label:"Vis",quantity:1,unitPrice:1}],totalHT:1,totalTVA:0,totalTTC:1,paidAmount:0,paymentMethod:"Non réglé",payments:[{id:"old-transfer",date:"2026-11-25",amount:0.5,method:"Virement"},{id:"old-cheque",date:"2026-11-25",amount:0.5,method:"Chèque"}]};
+ const decoded=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[invoice]}));assert.equal(decoded.supplierInvoices.length,1);
+});
