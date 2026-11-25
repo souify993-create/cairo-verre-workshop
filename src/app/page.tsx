@@ -20,10 +20,12 @@ import { PersonnelPanel } from "@/components/personnel-panel";
 import { AdminLogin } from "@/components/admin-login";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { loadCloudWorkshop, saveCloudWorkshop } from "@/lib/cloud-workshop";
+// Temporary workshop test mode: local demo data only; switch off after feature QA and before admin rollout.
+const DEMO_MODE = true;
 const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:ClipboardList},{label:"La caisse",icon:Wallet},{label:"Journalier",icon:FileText},{label:"Clients & fournisseurs",icon:Users},{label:"Personnel",icon:Users},{label:"Stock",icon:Package},{label:"Dépense",icon:Wallet}];
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 export default function Home(){
- const [authReady,setAuthReady]=useState(false),[isAdmin,setIsAdmin]=useState(false);
+ const [authReady,setAuthReady]=useState(DEMO_MODE),[isAdmin,setIsAdmin]=useState(DEMO_MODE);
  const [cloudReady,setCloudReady]=useState(false),[cloudError,setCloudError]=useState("");
  const cloudRevision=useRef(0);
  const [section,setSection]=useState("Calcul"),[collapsed,setCollapsed]=useState(false),[customer,setCustomer]=useState("");
@@ -34,6 +36,7 @@ export default function Home(){
  const cashMovements=useMemo(()=>[...ledger.cashMovements,...derivePayrollCashMovements(workshop.payrollWeeks||[],workshop.employees||[])],[ledger,workshop.payrollWeeks,workshop.employees]);
  useEffect(()=>{setDrafts(readDrafts());setWorkshop(readWorkshopStore());},[]);
  useEffect(()=>{
+  if(DEMO_MODE){setAuthReady(true);setIsAdmin(true);return;}
   const supabase=createSupabaseBrowserClient();
   let active=true;
   supabase.auth.getSession().then(({data})=>{
@@ -47,6 +50,7 @@ export default function Home(){
   return ()=>{active=false;subscription.unsubscribe();};
  },[]);
  useEffect(()=>{
+  if(DEMO_MODE){setCloudReady(true);return;}
   if(!isAdmin){setCloudReady(false);return;}
   let active=true;
   const initialize=async()=>{
@@ -93,6 +97,7 @@ export default function Home(){
  const totals=useMemo(()=>quoteTotals(glass,services,accessories),[glass,services,accessories]);
   const validQuote=isValidQuote(glass,services,accessories);
  const persistCloudState=async(nextWorkshop:WorkshopStore,nextDrafts:Draft[])=>{
+  if(DEMO_MODE){setWorkshop(nextWorkshop);setDrafts(nextDrafts);const a=writeWorkshopStore(nextWorkshop),b=writeDrafts(nextDrafts);if(!a||!b)alert("Enregistrement local impossible : vérifiez le stockage de cet appareil.");return a&&b;}
   if(!cloudReady){alert("Les données partagées ne sont pas encore prêtes. Réessayez dans un instant.");return false;}
   try{
    const revision=await saveCloudWorkshop(createSupabaseBrowserClient(),{...nextWorkshop,drafts:nextDrafts},cloudRevision.current);
@@ -132,7 +137,7 @@ export default function Home(){
  return <main className="shell">
  <aside className={collapsed?"sidebar collapsed":"sidebar"}><div className="brand"><div className="brand-mark">CV</div>{!collapsed&&<div><strong>CAIRO VERRE</strong><small>ATELIER · MEDIOUNA</small></div>}</div><button className="collapse" onClick={()=>setCollapsed(!collapsed)} aria-label="Réduire le menu"><PanelLeftClose size={17}/></button><div className="nav-caption">{!collapsed&&"ESPACE DE TRAVAIL"}</div>
  {nav.map(item=><button key={item.label} className={"nav-item "+(section===item.label?"active":"")} onClick={()=>setSection(item.label)} title={item.label}><item.icon size={18}/>{!collapsed&&<span>{item.label}</span>}</button>)}<div className="sidebar-bottom"><Settings size={17}/>{!collapsed&&<span>Paramètres</span>}</div></aside>
- <section className="workspace"><header className="topbar"><div><span className="eyebrow">CAIRO VERRE / ATELIER</span><h1>{section}</h1></div><div className="top-right"><span className="status-dot"/><span>Session administrateur</span><button className="add-btn" onClick={async()=>{await createSupabaseBrowserClient().auth.signOut();setIsAdmin(false);}}>Déconnexion</button><div className="avatar">CV</div></div></header>
+ <section className="workspace"><header className="topbar"><div><span className="eyebrow">CAIRO VERRE / ATELIER</span><h1>{section}</h1></div><div className="top-right"><span className="status-dot"/><span>{DEMO_MODE?"Mode test · données locales":"Session administrateur"}</span>{!DEMO_MODE&&<button className="add-btn" onClick={async()=>{await createSupabaseBrowserClient().auth.signOut();setIsAdmin(false);}}>Déconnexion</button>}<div className="avatar">CV</div></div></header>
  {section==="Calcul"?<div className="content"><div className="intro"><div><h2>{editingId?"Modifier le brouillon":"Nouveau devis"}</h2><p>Composez une commande : vitrage, services et accessoires dans un seul calcul.</p></div><div className="intro-actions"><span className="draft-count">{drafts.length} brouillon(s)</span><button className="add-btn" onClick={()=>{setCustomer("");setGlass([]);setServices([]);setAccessories([]);setEditingId(null);setSaved(false);}}>+ Nouveau</button></div></div><div className="form-grid"><div className="main-column">
  <section className="panel"><div className="panel-heading"><div><span className="step">01</span><div><h3>Client</h3><p>Le client sera enregistré à la livraison.</p></div></div></div><input className="text-input" value={customer} onChange={e=>setCustomer(e.target.value)} placeholder="Nom du client (facultatif pour le brouillon)"/></section>
  <section className="panel"><div className="panel-heading"><div><span className="step">02</span><div><h3>Vitrage</h3><p>Dimensions en millimètres · tarif de vente variable par commande.</p></div></div><button className="add-btn" onClick={()=>setGlass(a=>[...a,{label:"",widthMm:0,heightMm:0,quantity:1,pricePerM2:0}])}><Plus size={15}/> Ajouter verre</button></div>
