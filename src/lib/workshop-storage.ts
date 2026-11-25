@@ -14,7 +14,7 @@ export type SupplierInvoice = {
 };
 export type WorkshopStore = { version: 1; orders: StoredOrder[]; accessoryPurchases: AccessoryPurchase[]; supplierInvoices: SupplierInvoice[]; expenses: ExpenseRecord[]; employees: Employee[]; payrollWeeks: PayrollWeek[] };
 export const WORKSHOP_STORAGE_KEY = "cairo-verre-workshop-data";
-export const supplierInvoicePaid = (invoice: SupplierInvoice): number => invoice.paidAmount + (invoice.payments || []).filter(payment => payment.status === "confirmed" || (!payment.status && payment.method !== "Chèque" && payment.method !== "Effet")).reduce((sum, payment) => sum + payment.amount, 0);
+export const supplierInvoicePaid = (invoice: SupplierInvoice): number => invoice.paidAmount + (invoice.payments || []).filter(payment => payment.status === "confirmed" || payment.status === "pending" || (!payment.status && payment.method !== "Chèque" && payment.method !== "Effet")).reduce((sum, payment) => sum + payment.amount, 0);
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const text = (v: unknown): v is string => typeof v === "string";
