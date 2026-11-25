@@ -5,7 +5,7 @@ import type { StoredOrder } from "@/lib/workshop";
 type Method = "Espèces" | "Virement" | "Chèque" | "Effet";
 const money = (n: number) => new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD", maximumFractionDigits: 2 }).format(n);
 const remainingFor = (order: StoredOrder) => {
-  const paid = order.payments.filter(p => p.status === "confirmed").reduce((s, p) => s + p.amount, 0);
+  const paid = order.payments.filter(p => p.status !== "cancelled").reduce((s, p) => s + p.amount, 0);
   const refunded = order.refunds.filter(r => r.status === "confirmed").reduce((s, r) => s + r.amount, 0);
   return Math.max(0, order.totalTTC - paid + refunded);
 };
@@ -49,7 +49,7 @@ export function CaissePaymentPanel({ orders, onRecordPayment }: {
       <div className="draft-actions" style={{ marginTop: 14 }}><button className="add-btn" disabled={!selectedOrder || !validAmount || saving || ((method === "Chèque" || method === "Effet") && (!reference.trim() || !dueDate))} onClick={async () => {
         if (!selectedOrder || !validAmount) return;
         setSaving(true);
-        try { if (await onRecordPayment(selectedOrder, parsed, method, (method === "Chèque" || method === "Effet") ? { reference: reference.trim(), dueDate } : undefined)) setAmount(""); }
+        try { if (await onRecordPayment(selectedOrder, parsed, method, (method === "Chèque" || method === "Effet") ? { reference: reference.trim(), dueDate } : undefined)) { setAmount(""); setReference(""); setDueDate(""); } }
         finally { setSaving(false); }
       }}>{saving ? "Enregistrement…" : "Enregistrer l'encaissement"}</button></div>
       {(method === "Chèque" || method === "Effet") && <p className="local-note">Le chèque ou l’effet sera enregistré dans le suivi, planifié au Journalier à sa date d’échéance et restera en attente jusqu’à sa régularisation.</p>}
