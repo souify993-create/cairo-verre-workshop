@@ -1,9 +1,5 @@
 name: Deploy Cairo Verre to Cloudflare Workers
 on:
-  workflow_run:
-    workflows: ["Verify Cairo Verre"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -15,13 +11,10 @@ concurrency:
 
 jobs:
   deploy:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout verified commit
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22.12.0
