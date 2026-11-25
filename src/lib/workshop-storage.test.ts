@@ -71,3 +71,18 @@ test("expense records persist and old stores default to an empty expense list", 
   const old = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [] }));
   assert.deepEqual(old.expenses, []);
 });
+
+
+test("employee and payroll week records are retained", () => {
+  const employee = { id: "emp-1", name: "Ali", weeklySalary: 1200, active: true };
+  const week = {
+    id: "week-1", employeeId: "emp-1", weekStart: "2026-11-23",
+    attendance: [{ date: "2026-11-23", hours: 9 }],
+    advances: [{ id: "adv-1", date: "2026-11-24", amount: 200, method: "Espèces" }],
+    salaryPayments: [],
+  };
+  const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [], employees: [employee], payrollWeeks: [week] }));
+  assert.equal(decoded.employees.length, 1);
+  assert.equal(decoded.payrollWeeks.length, 1);
+  assert.equal(decoded.payrollWeeks[0].advances[0].amount, 200);
+});
