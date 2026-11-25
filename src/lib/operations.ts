@@ -1,6 +1,6 @@
 import type { PaymentMethod } from "./ledger";
 
-export type ExpenseCategory = "Loyer" | "Eau" | "Électricité" | "Maintenance" | "Carburant" | "Avance" | "Salaire" | "Autres";
+export type ExpenseCategory = "Loyer" | "Eau" | "Électricité" | "Maintenance" | "Carburant" | "Autres";
 export type ExpenseFrequency = "Jour" | "Semaine" | "Mois" | "Année";
 export type ExpenseRecord = {
   id: string;
