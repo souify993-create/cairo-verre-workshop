@@ -14,7 +14,7 @@ export type WorkshopOrder = {
   refunds: Refund[];
 };
 export type AccessoryPurchase = { accessoryId: string; label: string; quantity: number };
-export type CashMovement = { orderId: string; reference: string; method: PaymentMethod; direction: "Entrée" | "Sortie"; amount: number; kind: "Paiement" | "Remboursement" };
+export type CashMovement = { orderId: string; reference: string; method: PaymentMethod; direction: "Entrée" | "Sortie"; amount: number; kind: "Paiement" | "Remboursement" | "Achat fournisseur"; counterparty?: string };
 export type CustomerBalance = { customer: string; total: number; paid: number; remaining: number; credit: number };
 export type LedgerSnapshot = {
   cashMovements: CashMovement[];
@@ -29,7 +29,7 @@ const positive = (n: number) => Number.isFinite(n) ? Math.max(0, n) : 0;
  * Drafts never affect stock, customer balances or the cash journal.
  * Re-running after an edit does not append duplicate movements.
  */
-export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurchase[]): LedgerSnapshot {
+export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurchase[], supplierInvoices: { id: string; supplier: string; invoiceNumber: string; paidAmount: number; paymentMethod: PaymentMethod | "Non réglé" }[] = []): LedgerSnapshot {
   const cashMovements: CashMovement[] = [];
   const customerMap = new Map<string, { total: number; paid: number }>();
   const stockMap = new Map<string, { label: string; purchased: number; consumed: number }>();
@@ -72,7 +72,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
     }
   }
 
-  const customers = [...customerMap.entries()].map(([customer, values]) => ({
+  for (const invoice of supplierInvoices) {\n    const amount = positive(invoice.paidAmount);\n    if (amount > 0 && invoice.paymentMethod !== "Non réglé") {\n      cashMovements.push({ orderId: invoice.id, reference: invoice.invoiceNumber, method: invoice.paymentMethod, direction: "Sortie", amount, kind: "Achat fournisseur", counterparty: invoice.supplier });\n    }\n  }\n\n  const customers = [...customerMap.entries()].map(([customer, values]) => ({
     customer,
     total: values.total,
     paid: values.paid,
