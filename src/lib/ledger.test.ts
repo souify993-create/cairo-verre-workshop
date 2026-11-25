@@ -102,7 +102,7 @@ test("integrated order, cheque, refund, stock and supplier settlement flow stays
  order=confirmPayment(order,"cheque-flow","2026-11-26T10:00:00.000Z");
  order=addRefund(order,{id:"refund-flow",method:"Espèces",amount:25,status:"confirmed",date:"2026-11-26"});
  const supplier=[{id:"supplier-flow",supplier:"Fournisseur Flow",invoiceNumber:"SF-1",paidAmount:30,paymentMethod:"Espèces" as const,paidDate:"2026-11-25",payments:[{id:"supplier-transfer",date:"2026-11-26",amount:20,method:"Virement" as const,status:"confirmed" as const},{id:"supplier-cheque",date:"2026-11-26",amount:10,method:"Chèque" as const,status:"pending" as const}]}];
- const args=[order,[{accessoryId:"poignee",label:"Poignée",quantity:5}],supplier] as const;
+ const args=[[order],[{accessoryId:"poignee",label:"Poignée",quantity:5}],supplier] as const;
  const first=deriveLedger(...args),second=deriveLedger(...args);
  assert.equal(first.stock[0].available,3);
  assert.equal(first.customers[0].paid,175);
