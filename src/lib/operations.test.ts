@@ -23,3 +23,4 @@ test("daily expense keeps its payment method and appears as a Sortie",()=>{
  assert.equal(movement.amount,100);
  assert.equal(movement.kind,"Dépense");
 });
+\n\ntest("invalid calendar dates are rejected instead of being normalized",()=>{\n assert.deepEqual(deriveExpenseMovements([expense()],"2026-02-31"),[]);\n assert.deepEqual(deriveExpenseMovements([expense({startDate:"2026-02-31"})],"2026-03-01"),[]);\n assert.deepEqual(deriveExpenseMovements([expense({endDate:"2026-02-30"})],"2026-03-01"),[]);\n});\n
