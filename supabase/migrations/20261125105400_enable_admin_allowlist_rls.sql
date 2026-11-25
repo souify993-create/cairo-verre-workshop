@@ -1,0 +1,1 @@
+ALTER TABLE private.admin_allowlist ENABLE ROW LEVEL SECURITY;
