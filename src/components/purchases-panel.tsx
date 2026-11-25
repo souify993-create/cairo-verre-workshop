@@ -29,7 +29,7 @@ export function PurchasesPanel({invoices,onAdd,onUpdate}:{invoices:SupplierInvoi
 
  const validLines=lines.length>0&&lines.every(l=>l.label.trim()&&Number.isFinite(l.quantity)&&l.quantity>0&&Number.isFinite(l.unitPrice)&&l.unitPrice>=0&&(category!=="glass"||(Number(l.widthMm)>0&&Number(l.heightMm)>0)));
  const submit=()=>{
-  if(!supplier.trim()||!invoiceNumber.trim()||!validLines||totalHT<0||totalTVA<0||totalTTC<0||paidAmount<0||paidAmount>totalTTC||(paidAmount>0&&method==="Non réglé"))return;
+  if(!supplier.trim()||!invoiceNumber.trim()||!validLines||totalHT<0||totalTVA<0||totalTTC<0||paidAmount<0||paidAmount>totalTTC||(paidAmount>0&&method==="Non réglé")||((method==="Chèque"||method==="Effet")&&paidAmount>0&&(!chequeNumber.trim()||!chequeDate)))return;
   const invoice:SupplierInvoice={id:crypto.randomUUID(),supplier:supplier.trim(),invoiceNumber:invoiceNumber.trim(),date,category,lines:lines.map(l=>({...l,...(category==="glass"?{}:{widthMm:undefined,heightMm:undefined})})),totalHT,totalTVA,totalTTC,paidAmount:method==="Chèque"||method==="Effet"?0:paidAmount,paymentMethod:method,...(paidAmount>0&&method!=="Chèque"&&method!=="Effet"?{paidDate}:{}),...(method==="Chèque"||method==="Effet"?{chequeNumber,chequeDate,...(paidAmount>0?{payments:[{id:crypto.randomUUID(),date,amount:paidAmount,method:method as "Chèque"|"Effet",status:"pending" as const,reference:chequeNumber,dueDate:chequeDate}]}:{})}:{})};
   onAdd(invoice);setInvoiceNumber("");setLines([blankLine()]);setTotalHT(0);setTotalTVA(0);setTotalTTC(0);setPaidAmount(0);setMethod("Non réglé");setChequeNumber("");setChequeDate("");
  };
@@ -62,7 +62,7 @@ export function PurchasesPanel({invoices,onAdd,onUpdate}:{invoices:SupplierInvoi
     {(method==="Chèque"||method==="Effet")&&<><label className="field"><span>Numéro du chèque / effet</span><input className="text-input" value={chequeNumber} onChange={e=>setChequeNumber(e.target.value)}/></label><label className="field"><span>Date du chèque</span><input className="text-input" type="date" value={chequeDate} onChange={e=>setChequeDate(e.target.value)}/></label></>}
    </div>
    {(method==="Chèque"||method==="Effet")&&<p className="local-note">Le chèque ou l’effet reste en attente jusqu’à sa régularisation. Sa date d’échéance sera utilisée dans le Journalier.</p>}
-   <button className="add-btn" style={{marginTop:16}} disabled={!supplier.trim()||!invoiceNumber.trim()||!validLines||paidAmount>totalTTC||paidAmount<0||(paidAmount>0&&method==="Non réglé")||totalHT<0||totalTVA<0||totalTTC<0} onClick={submit}>Enregistrer la facture</button>
+   <button className="add-btn" style={{marginTop:16}} disabled={!supplier.trim()||!invoiceNumber.trim()||!validLines||paidAmount>totalTTC||paidAmount<0||(paidAmount>0&&method==="Non réglé")||((method==="Chèque"||method==="Effet")&&paidAmount>0&&(!chequeNumber.trim()||!chequeDate))||totalHT<0||totalTVA<0||totalTTC<0} onClick={submit}>Enregistrer la facture</button>
   </section>
   <section className="panel"><div className="panel-heading"><div><h3>Fournisseurs</h3><p>Date de dernière facture · N° achat · Total · Payé · Reste. 10 fournisseurs par page.</p></div></div>
    <input className="text-input" style={{width:"100%",maxWidth:420,marginBottom:14}} value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un fournisseur..."/>
