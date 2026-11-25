@@ -5,6 +5,7 @@ export const LINEAR_SERVICES = [
 export type ServiceLine = { name: string; unit: "ml" | "m²"; quantity: number; unitPrice: number };
 export type GlassLine = { label: string; widthMm: number; heightMm: number; quantity: number; pricePerM2: number };
 export type AccessoryLine = { label: string; quantity: number; unitPrice: number };
+export const serviceUnit = (name: string): "ml" | "m²" => LINEAR_SERVICES.includes(name as typeof LINEAR_SERVICES[number]) ? "ml" : "m²";
 export const areaM2 = (w: number, h: number, q: number) => Math.max(0,w)*Math.max(0,h)*Math.max(0,q)/1_000_000;
 export const lineTotal = (q: number, p: number) => Math.max(0,q)*Math.max(0,p);
 export function quoteTotals(glass: GlassLine[], services: ServiceLine[], accessories: AccessoryLine[]) {
