@@ -50,7 +50,8 @@ export default function Home(){
  const [authReady,setAuthReady]=useState(DEMO_MODE),[isAdmin,setIsAdmin]=useState(DEMO_MODE);
  const [cloudReady,setCloudReady]=useState(false),[cloudError,setCloudError]=useState("");
  const cloudRevision=useRef(0);
- const [section,setSection]=useState("Calcul"),[collapsed,setCollapsed]=useState(false),[customer,setCustomer]=useState("");\n const [showNewCustomer,setShowNewCustomer]=useState(false),[newCustomerName,setNewCustomerName]=useState(""),[newCustomerPhone,setNewCustomerPhone]=useState("");
+ const [section,setSection]=useState("Calcul"),[collapsed,setCollapsed]=useState(false),[customer,setCustomer]=useState("");
+ const [showNewCustomer,setShowNewCustomer]=useState(false),[newCustomerName,setNewCustomerName]=useState(""),[newCustomerPhone,setNewCustomerPhone]=useState("");
  const [glass,setGlass]=useState<GlassLine[]>([]),[services,setServices]=useState<ServiceLine[]>([]),[accessories,setAccessories]=useState<AccessoryLine[]>([]);
  const [serviceWidth,setServiceWidth]=useState(0),[serviceHeight,setServiceHeight]=useState(0),[servicePieces,setServicePieces]=useState(1);
  const glassGroupKey=(line:GlassLine)=>line.groupId||"legacy:"+line.label.trim().toLocaleLowerCase("fr");
@@ -167,7 +168,8 @@ export default function Home(){
   }
  };
  const persistDraft=async()=>{
-  if(!validQuote){alert("Complétez les désignations, dimensions et quantités avant d’enregistrer le devis.");return;}\n  if(customer.trim()&&!customerNames.some(name=>customerKey(name)===customerKey(customer))){alert("Choisissez un client dans les résultats ou ajoutez-le avec le bouton +.");return;}
+  if(!validQuote){alert("Complétez les désignations, dimensions et quantités avant d’enregistrer le devis.");return;}
+  if(customer.trim()&&!customerNames.some(name=>customerKey(name)===customerKey(customer))){alert("Choisissez un client dans les résultats ou ajoutez-le avec le bouton +.");return;}
   if(editingDeliveredId){
    const original=workshop.orders.find(order=>order.id===editingDeliveredId);
    if(!original||original.status!=="delivered"){alert("Commande livrée introuvable.");return;}
