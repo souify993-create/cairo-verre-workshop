@@ -16,7 +16,6 @@ import { JournalierPanel } from "@/components/journalier-panel";
 import { ExpensesPanel } from "@/components/expenses-panel";
 import type { ExpenseRecord } from "@/lib/operations";
 import { PersonnelPanel } from "@/components/personnel-panel";
-import type { Employee, PayrollWeek } from "@/lib/payroll";
 const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:ClipboardList},{label:"La caisse",icon:Wallet},{label:"Journalier",icon:FileText},{label:"Clients & fournisseurs",icon:Users},{label:"Personnel",icon:Users},{label:"Stock",icon:Package},{label:"Dépense",icon:Wallet}];
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 export default function Home(){
