@@ -19,8 +19,8 @@ export function ChequesEffetsPanel({orders,invoices,onUpdateOrder,onUpdateInvoic
  },[orders,invoices]);
  const visible=rows.filter(r=>(filter==="Archive"?r.state!=="En attente":r.side===filter&&r.state==="En attente")&&(kind==="Tous"||r.kind===kind)&&(status==="Tous"||r.state===status));
  const settle=async(row:typeof rows[number])=>{
-  if(row.side==="Clients"){const order=orders.find(o=>o.id===row.ownerId);if(!order)return;const updated={...order,payments:order.payments.map(p=>p.id===row.id?{...p,status:"confirmed" as const,date:p.dueDate||p.date}:p),updatedAt:new Date().toISOString()};await onUpdateOrder(updated);}
-  else {const invoice=invoices.find(x=>x.id===row.ownerId);if(!invoice)return;await onUpdateInvoice({...invoice,payments:(invoice.payments||[]).map(p=>p.id===row.id?{...p,status:"confirmed" as const,date:p.dueDate||p.date}:p)});}
+  if(row.side==="Clients"){const order=orders.find(o=>o.id===row.ownerId);if(!order)return;const updated={...order,payments:order.payments.map(p=>p.id===row.id?{...p,status:"confirmed" as const}:p),updatedAt:new Date().toISOString()};await onUpdateOrder(updated);}
+  else {const invoice=invoices.find(x=>x.id===row.ownerId);if(!invoice)return;await onUpdateInvoice({...invoice,payments:(invoice.payments||[]).map(p=>p.id===row.id?{...p,status:"confirmed" as const}:p)});}
  };
  const remove=async(row:typeof rows[number])=>{
   if(!window.confirm("Supprimer ce "+row.kind+" ? Le montant reviendra automatiquement au reste dû et l’opération restera dans l’archive."))return;
