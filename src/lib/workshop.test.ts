@@ -160,3 +160,18 @@ test("editing delivered accessory quantities automatically changes consumed stoc
   assert.equal(ledger.stock[0].consumed, 1);
   assert.equal(ledger.stock[0].available, 4);
 });
+
+test("pending cheque and effect reduce customer debt, stay out of cash, and settle on maturity date", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cheque-maturity", method: "Chèque", amount: 100, status: "pending", reference: "CH-778", dueDate: "2026-12-05", date: "2026-11-25" });
+  let ledger = deriveLedger([order], []);
+  assert.equal(ledger.customers[0].remaining, 150);
+  assert.equal(ledger.cashMovements.length, 0);
+  order = confirmPayment(order, "cheque-maturity", "2026-11-28T12:00:00.000Z");
+  ledger = deriveLedger([order], []);
+  assert.equal(ledger.customers[0].remaining, 150);
+  assert.equal(ledger.cashMovements[0].date, "2026-12-05");
+  const deleted = { ...order, payments: order.payments.map(p => p.id === "cheque-maturity" ? { ...p, status: "cancelled" as const } : p) };
+  assert.equal(deriveLedger([deleted], []).customers[0].remaining, 250);
+  assert.equal(deleted.payments[0].reference, "CH-778");
+});
