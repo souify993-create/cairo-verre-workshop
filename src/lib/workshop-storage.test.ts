@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decodeWorkshopStore } from "./workshop-storage";
+import { decodeWorkshopStore, supplierInvoicePaid } from "./workshop-storage";
 import { markOrderDelivered, orderFromDraft } from "./workshop";
 import type { Draft } from "./storage";
 
@@ -109,4 +109,14 @@ test("supplier invoice later payments persist and cannot exceed invoice total",(
 test("legacy supplier payments without status remain readable; legacy cheques stay pending",()=>{
  const invoice={id:"legacy-pay",supplier:"Fournisseur D",invoiceNumber:"FD-1",date:"2026-11-25",category:"accessory",lines:[{label:"Vis",quantity:1,unitPrice:1}],totalHT:1,totalTVA:0,totalTTC:1,paidAmount:0,paymentMethod:"Non réglé",payments:[{id:"old-transfer",date:"2026-11-25",amount:0.5,method:"Virement"},{id:"old-cheque",date:"2026-11-25",amount:0.5,method:"Chèque"}]};
  const decoded=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[invoice]}));assert.equal(decoded.supplierInvoices.length,1);
+});
+
+
+test("cancelled supplier cheques release the reserved invoice balance and are not counted as paid",()=>{
+ const invoice={id:"cancel-cheque",supplier:"Fournisseur E",invoiceNumber:"FE-1",date:"2026-11-25",category:"accessory",lines:[{label:"Vis",quantity:1,unitPrice:100}],totalHT:100,totalTVA:20,totalTTC:120,paidAmount:0,paymentMethod:"Chèque",payments:[{id:"p-cancel",date:"2026-11-25",amount:120,method:"Chèque",status:"cancelled"}]};
+ const decoded=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[invoice]}));
+ assert.equal(decoded.supplierInvoices.length,1);
+ assert.equal(supplierInvoicePaid(decoded.supplierInvoices[0]),0);
+ const over=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[{...invoice,payments:[{...invoice.payments[0],status:"pending"},{id:"p-extra",date:"2026-11-26",amount:1,method:"Espèces",status:"confirmed"}]}]}));
+ assert.equal(over.supplierInvoices.length,0);
 });
