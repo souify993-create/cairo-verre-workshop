@@ -14,7 +14,14 @@ New, independent application for Cairo Verre. This repository is intentionally s
 - Automated calculation and ledger tests; CI workflow for typecheck, tests and production build
 - Drafts stored locally in this first UI milestone only
 
-## Cloudflare deployment\n- Hosting target: Cloudflare Workers using `@opennextjs/cloudflare` (OpenNext).\n- Dedicated Worker name: `glass-management`.\n- Preview locally with `npm run preview`; deploy only after manual QA with `npm run deploy`.\n- The repository includes `wrangler.jsonc`, `open-next.config.ts`, and Cloudflare static-asset cache headers.\n- No Worker has been deployed yet; the Cloudflare account currently has no Worker scripts for this project.\n\n## Important
+## Cloudflare deployment
+- Hosting target: Cloudflare Workers using `@opennextjs/cloudflare` (OpenNext).
+- Dedicated Worker name: `glass-management`.
+- Preview locally with `npm run preview`; deploy only after manual QA with `npm run deploy`.
+- The repository includes `wrangler.jsonc`, `open-next.config.ts`, and Cloudflare static-asset cache headers.
+- No Worker has been deployed yet; the Cloudflare account currently has no Worker scripts for this project.
+
+## Important
 No paid Supabase project or external database is created in this phase. Local browser storage is temporary and device-specific. Before real business use, connect a database and implement transactional delivery, stock, payments, customer balances and reports.
 
 ## Run locally
