@@ -1,6 +1,7 @@
 import type { AccessoryPurchase, PaymentMethod } from "./ledger";
 import type { StoredOrder } from "./workshop";
 import type { ExpenseRecord } from "./operations";
+import type { Employee, PayrollWeek } from "./payroll";
 
 export type PurchaseLine = { label: string; quantity: number; unitPrice: number; widthMm?: number; heightMm?: number };
 export type SupplierInvoice = {
@@ -10,7 +11,7 @@ export type SupplierInvoice = {
   paidAmount: number; paymentMethod: PaymentMethod | "Non réglé";
   chequeNumber?: string; chequeDate?: string; paidDate?: string;
 };
-export type WorkshopStore = { version: 1; orders: StoredOrder[]; accessoryPurchases: AccessoryPurchase[]; supplierInvoices: SupplierInvoice[]; expenses: ExpenseRecord[] };
+export type WorkshopStore = { version: 1; orders: StoredOrder[]; accessoryPurchases: AccessoryPurchase[]; supplierInvoices: SupplierInvoice[]; expenses: ExpenseRecord[]; employees: Employee[]; payrollWeeks: PayrollWeek[] };
 export const WORKSHOP_STORAGE_KEY = "cairo-verre-workshop-data";
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -33,9 +34,11 @@ function validInvoice(v:unknown):v is SupplierInvoice {
  return v.lines.every(x=>isRecord(x)&&text(x.label)&&amount(x.quantity)&&amount(x.unitPrice)&&(x.widthMm===undefined||amount(x.widthMm))&&(x.heightMm===undefined||amount(x.heightMm)));
 }
 const validExpense=(v:unknown):v is ExpenseRecord=>isRecord(v)&&text(v.id)&&text(v.name)&&["Loyer","Eau","Électricité","Maintenance","Carburant","Autres"].includes(String(v.category))&&amount(v.amount)&&["Jour","Semaine","Mois","Année"].includes(String(v.frequency))&&methods.includes(v.paymentMethod as PaymentMethod)&&text(v.startDate)&&(v.endDate===undefined||text(v.endDate));
-const empty=():WorkshopStore=>({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[],expenses:[]});
+const validEmployee=(v:unknown):v is Employee=>isRecord(v)&&text(v.id)&&text(v.name)&&amount(v.weeklySalary)&&typeof v.active==="boolean";
+const validPayrollWeek=(v:unknown):v is PayrollWeek=>isRecord(v)&&text(v.id)&&text(v.employeeId)&&text(v.weekStart)&&Array.isArray(v.attendance)&&Array.isArray(v.advances)&&Array.isArray(v.salaryPayments)&&v.attendance.every(x=>isRecord(x)&&text(x.date)&&amount(x.hours)&&x.hours<=9)&&v.advances.every(x=>isRecord(x)&&text(x.id)&&text(x.date)&&amount(x.amount)&&methods.includes(x.method as PaymentMethod))&&v.salaryPayments.every(x=>isRecord(x)&&text(x.id)&&text(x.date)&&amount(x.amount)&&methods.includes(x.method as PaymentMethod));
+const empty=():WorkshopStore=>({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[],expenses:[],employees:[],payrollWeeks:[]});
 export function decodeWorkshopStore(raw:string|null):WorkshopStore{
- if(!raw)return empty();try{const v:unknown=JSON.parse(raw);if(!isRecord(v)||v.version!==1||!Array.isArray(v.orders)||!Array.isArray(v.accessoryPurchases))return empty();return {version:1,orders:v.orders.filter(validOrder),accessoryPurchases:v.accessoryPurchases.filter(validPurchase),supplierInvoices:Array.isArray(v.supplierInvoices)?v.supplierInvoices.filter(validInvoice):[],expenses:Array.isArray(v.expenses)?v.expenses.filter(validExpense):[]};}catch{return empty();}
+ if(!raw)return empty();try{const v:unknown=JSON.parse(raw);if(!isRecord(v)||v.version!==1||!Array.isArray(v.orders)||!Array.isArray(v.accessoryPurchases))return empty();return {version:1,orders:v.orders.filter(validOrder),accessoryPurchases:v.accessoryPurchases.filter(validPurchase),supplierInvoices:Array.isArray(v.supplierInvoices)?v.supplierInvoices.filter(validInvoice):[],expenses:Array.isArray(v.expenses)?v.expenses.filter(validExpense):[],employees:Array.isArray(v.employees)?v.employees.filter(validEmployee):[],payrollWeeks:Array.isArray(v.payrollWeeks)?v.payrollWeeks.filter(validPayrollWeek):[]};}catch{return empty();}
 }
 export function readWorkshopStore():WorkshopStore{if(typeof window==="undefined")return empty();try{return decodeWorkshopStore(window.localStorage.getItem(WORKSHOP_STORAGE_KEY));}catch{return empty();}}
-export function writeWorkshopStore(store:WorkshopStore):boolean{if(typeof window==="undefined")return false;try{const safe:WorkshopStore={version:1,orders:store.orders.filter(validOrder),accessoryPurchases:store.accessoryPurchases.filter(validPurchase),supplierInvoices:(store.supplierInvoices||[]).filter(validInvoice),expenses:(store.expenses||[]).filter(validExpense)};window.localStorage.setItem(WORKSHOP_STORAGE_KEY,JSON.stringify(safe));return true;}catch{return false;}}
+export function writeWorkshopStore(store:WorkshopStore):boolean{if(typeof window==="undefined")return false;try{const safe:WorkshopStore={version:1,orders:store.orders.filter(validOrder),accessoryPurchases:store.accessoryPurchases.filter(validPurchase),supplierInvoices:(store.supplierInvoices||[]).filter(validInvoice),expenses:(store.expenses||[]).filter(validExpense),employees:(store.employees||[]).filter(validEmployee),payrollWeeks:(store.payrollWeeks||[]).filter(validPayrollWeek)};window.localStorage.setItem(WORKSHOP_STORAGE_KEY,JSON.stringify(safe));return true;}catch{return false;}}
