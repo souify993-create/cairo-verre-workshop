@@ -21,9 +21,9 @@ test("workshop store reads valid orders and accessory purchases", () => {
 });
 
 test("workshop store rejects unsupported versions and malformed JSON", () => {
-  assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [] });
+  assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [] });
   assert.deepEqual(decodeWorkshopStore(JSON.stringify({ version: 2, orders: [delivered], accessoryPurchases: [] })),
-    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [] });
+    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [] });
 });
 
 test("workshop store filters malformed order records", () => {
@@ -48,7 +48,7 @@ test("supplier invoices are retained and glass invoices do not imply accessory s
 
 test("older local stores remain readable without supplier invoice data", () => {
   const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [] }));
-  assert.deepEqual(decoded.supplierInvoices, []);
+  assert.deepEqual(decoded.supplierInvoices, []);\n  assert.deepEqual(decoded.expenses, []);
 });
 
 
@@ -57,4 +57,14 @@ test("older payment records without cash dates remain valid and are not assigned
   const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [oldOrder], accessoryPurchases: [] }));
   assert.equal(decoded.orders.length, 1);
   assert.equal(decoded.orders[0].payments[0].date, undefined);
+});
+
+
+test("expense records persist and old stores default to an empty expense list", () => {
+  const expense = { id: "e1", name: "Loyer", category: "Loyer", amount: 3000, frequency: "Mois", paymentMethod: "Espèces", startDate: "2026-11-01" };
+  const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [], expenses: [expense] }));
+  assert.equal(decoded.expenses.length, 1);
+  assert.equal(decoded.expenses[0].amount, 3000);
+  const old = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [] }));
+  assert.deepEqual(old.expenses, []);
 });
