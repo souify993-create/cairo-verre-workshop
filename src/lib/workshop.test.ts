@@ -93,3 +93,20 @@ test("a cheque refund stays pending until encashment and respects confirmed rece
   assert.equal(outflows.length, 2);
   assert.equal(outflows.find(m => m.orderId === "cheque-refund")?.date, "2026-11-26");
 });
+
+test("only pending cheques can be confirmed as collected", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cash-only", method: "Espèces", amount: 50, status: "pending" });
+  assert.throws(() => confirmPayment(order, "cash-only"));
+  order = addPayment(order, { id: "cheque-only", method: "Chèque", amount: 50, status: "confirmed" });
+  assert.equal(order.payments.find(p => p.id === "cheque-only")?.status, "pending");
+  order = confirmPayment(order, "cheque-only");
+  assert.throws(() => confirmPayment(order, "cheque-only"));
+});
+
+test("only pending cheque refunds can be confirmed", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cash-for-refund", method: "Espèces", amount: 100, status: "confirmed" });
+  order = addRefund(order, { id: "cash-refund-only", method: "Espèces", amount: 20, status: "pending" });
+  assert.throws(() => confirmRefund(order, "cash-refund-only"));
+});
