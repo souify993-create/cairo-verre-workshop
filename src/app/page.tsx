@@ -105,8 +105,8 @@ export default function Home(){
   void initialize();
   return ()=>{active=false;};
  },[isAdmin]);
- const totals=useMemo(()=>quoteTotals(glass,measuredServices,accessories),[glass,services,accessories]);
-  const validQuote=isValidQuote(glass,services,accessories);
+ const totals=useMemo(()=>quoteTotals(glass,measuredServices,accessories),[glass,measuredServices,accessories]);
+  const validQuote=isValidQuote(glass,measuredServices,accessories);
  const persistCloudState=async(nextWorkshop:WorkshopStore,nextDrafts:Draft[])=>{
   if(DEMO_MODE){setWorkshop(nextWorkshop);setDrafts(nextDrafts);const a=writeWorkshopStore(nextWorkshop),b=writeDrafts(nextDrafts);if(!a||!b)alert("Enregistrement local impossible : vérifiez le stockage de cet appareil.");return a&&b;}
   if(!cloudReady){alert("Les données partagées ne sont pas encore prêtes. Réessayez dans un instant.");return false;}
@@ -167,7 +167,7 @@ export default function Home(){
   }catch(error){alert(error instanceof Error?error.message:"Erreur lors de la livraison.");}
   return;
  }
- const existing=drafts.find(x=>x.id===editingId);const d:Draft={id:existing?.id||crypto.randomUUID(),number:existing?.number||"CV-"+String(Date.now()).slice(-6),customer,createdAt:existing?.createdAt||new Date().toISOString(),glass,services,accessories,total:totals.ttc};const next=existing?drafts.map(x=>x.id===d.id?d:x):[d,...drafts];if(!await persistCloudState(workshop,next))return;setEditingId(d.id);setSaved(true);window.setTimeout(()=>setSaved(false),2500);};
+ const existing=drafts.find(x=>x.id===editingId);const d:Draft={id:existing?.id||crypto.randomUUID(),number:existing?.number||"CV-"+String(Date.now()).slice(-6),customer,createdAt:existing?.createdAt||new Date().toISOString(),glass,services:measuredServices,accessories,total:totals.ttc};const next=existing?drafts.map(x=>x.id===d.id?d:x):[d,...drafts];if(!await persistCloudState(workshop,next))return;setEditingId(d.id);setSaved(true);window.setTimeout(()=>setSaved(false),2500);};
  const saveWorkshop=async(next:WorkshopStore)=>persistCloudState(next,drafts);
  const addAccessoryPurchase=async(purchase:{accessoryId:string;label:string;quantity:number})=>{if(!Number.isFinite(purchase.quantity)||purchase.quantity<=0)return;await saveWorkshop({...workshop,accessoryPurchases:[...workshop.accessoryPurchases,purchase]});};
  const addExpense=async(expense:ExpenseRecord)=>{await saveWorkshop({...workshop,expenses:[expense,...(workshop.expenses||[])]});};
