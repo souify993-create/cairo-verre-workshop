@@ -29,11 +29,11 @@ const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:Clipboa
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 function normalizeOrderNumbers(drafts: Draft[], orders: StoredOrder[]) {
  const entries=[...drafts.map(item=>({id:item.id,createdAt:item.createdAt,number:item.number})),...orders.map(item=>({id:item.id,createdAt:item.createdAt,number:item.number}))];
- const used=entries.map(item=>/^C#(\\d+)$/.exec(item.number)).filter(Boolean).map(match=>Number(match![1]));
+ const used=entries.map(item=>/^C#(\d+)$/.exec(item.number)).filter(Boolean).map(match=>Number(match![1]));
  let next=Math.max(0,...used)+1;
  const numbers=new Map<string,string>();
  for(const item of [...entries].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))){
-  const match=/^C#(\\d+)$/.exec(item.number);
+  const match=/^C#(\d+)$/.exec(item.number);
   numbers.set(item.id,match?item.number:`C#${next++}`);
  }
  const nextDrafts=drafts.map(item=>({...item,number:numbers.get(item.id)||item.number}));
@@ -41,7 +41,7 @@ function normalizeOrderNumbers(drafts: Draft[], orders: StoredOrder[]) {
  return {drafts:nextDrafts,orders:nextOrders,changed:nextDrafts.some((item,i)=>item.number!==drafts[i].number)||nextOrders.some((item,i)=>item.number!==orders[i].number)};
 }
 function nextOrderNumber(drafts: Draft[], orders: StoredOrder[]) {
- const values=[...drafts,...orders].map(item=>Number(/^C#(\\d+)$/.exec(item.number)?.[1]||0));
+ const values=[...drafts,...orders].map(item=>Number(/^C#(\d+)$/.exec(item.number)?.[1]||0));
  return `C#${Math.max(0,...values)+1}`;
 }
 
@@ -55,7 +55,8 @@ export default function Home(){
  const glassGroupKey=(line:GlassLine)=>line.groupId||"legacy:"+line.label.trim().toLocaleLowerCase("fr");
  const glassGroups=useMemo(()=>{const map=new Map<string,GlassLine[]>();glass.forEach(line=>{const key=glassGroupKey(line);map.set(key,[...(map.get(key)||[]),line]);});return [...map.entries()].map(([id,lines])=>({id,lines}));},[glass]);
  const measuredServices=useMemo(()=>services.map(s=>{const lines=s.groupId?glass.filter(line=>line.groupId===s.groupId):[];const quantity=s.groupId?serviceQuantityForGlassLines(s.name,lines):serviceQuantity(s.name,serviceWidth,serviceHeight,servicePieces);return {...s,unit:serviceUnit(s.name),widthMm:lines[0]?.widthMm??serviceWidth,heightMm:lines[0]?.heightMm??serviceHeight,pieces:lines.reduce((sum,line)=>sum+line.quantity,0)||servicePieces,quantity};}),[services,glass,serviceWidth,serviceHeight,servicePieces]);
- const [drafts,setDrafts]=useState<Draft[]>([]),[saved,setSaved]=useState(false),[editingId,setEditingId]=useState<string|null>(null);\n const [orderFilter,setOrderFilter]=useState<"all"|"draft"|"cancelled"|"delivered">("draft"),[orderPage,setOrderPage]=useState(1),[orderSearch,setOrderSearch]=useState("");\n const [cashPage,setCashPage]=useState(1);
+ const [drafts,setDrafts]=useState<Draft[]>([]),[saved,setSaved]=useState(false),[editingId,setEditingId]=useState<string|null>(null);
+ const [orderFilter,setOrderFilter]=useState<"all"|"draft"|"cancelled"|"delivered">("draft"),[orderPage,setOrderPage]=useState(1),[orderSearch,setOrderSearch]=useState("");\n const [cashPage,setCashPage]=useState(1);
  const [editingDeliveredId,setEditingDeliveredId]=useState<string|null>(null);
  const [deliveryDraftId,setDeliveryDraftId]=useState<string|null>(null);
  const [initialPaidAmount,setInitialPaidAmount]=useState("");
