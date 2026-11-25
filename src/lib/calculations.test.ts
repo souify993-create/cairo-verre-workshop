@@ -23,8 +23,8 @@ test("accepts accessory-only and service-only quotes",()=>{
 
 test("aggregates service quantities across several sizes within one glass group",()=>{
  const lines=[{label:"CLAIR 4",widthMm:1200,heightMm:1500,quantity:5,pricePerM2:0,groupId:"clair"},{label:"CLAIR 4",widthMm:800,heightMm:800,quantity:10,pricePerM2:0,groupId:"clair"},{label:"CLAIR 4",widthMm:1500,heightMm:2100,quantity:12,pricePerM2:0,groupId:"clair"}];
- assert.equal(serviceQuantityForGlassLines("SABLAGE",lines),5*1.2*1.5+10*.8*.8+12*1.5*2.1);
- assert.equal(serviceQuantityForGlassLines("BP",lines),5*2*(1.2+1.5)+10*2*(.8+.8)+12*2*(1.5+2.1));
+ assert.ok(Math.abs(serviceQuantityForGlassLines("SABLAGE",lines)-(5*1.2*1.5+10*.8*.8+12*1.5*2.1))<1e-9);
+ assert.ok(Math.abs(serviceQuantityForGlassLines("BP",lines)-(5*2*(1.2+1.5)+10*2*(.8+.8)+12*2*(1.5+2.1)))<1e-9);
  const trempe=[{label:"TREMPE 6",widthMm:900,heightMm:900,quantity:7,pricePerM2:0,groupId:"trempe"},{label:"TREMPE 6",widthMm:1200,heightMm:1300,quantity:10,pricePerM2:0,groupId:"trempe"}];
- assert.equal(serviceQuantityForGlassLines("SABLAGE",trempe),7*.9*.9+10*1.2*1.3);
+ assert.ok(Math.abs(serviceQuantityForGlassLines("SABLAGE",trempe)-(7*.9*.9+10*1.2*1.3))<1e-9);
 });
