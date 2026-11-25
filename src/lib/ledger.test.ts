@@ -79,3 +79,9 @@ test("cash movements preserve actual dates and keep legacy records explicitly un
   assert.equal(result.cashMovements.find(x => x.kind === "Remboursement")?.direction, "Sortie");
   assert.equal(result.cashMovements.find(x => x.kind === "Achat fournisseur")?.date, "2026-11-24");
 });
+
+
+test("later supplier settlements are separate dated cash outflows",()=>{
+ const result=deriveLedger([],[],[{id:"inv",supplier:"Fournisseur",invoiceNumber:"FV-8",paidAmount:100,paymentMethod:"Espèces",paidDate:"2026-11-20",payments:[{id:"sp-1",date:"2026-11-24",amount:150,method:"Virement"}]}]);
+ assert.equal(result.cashMovements.length,2);assert.equal(result.cashMovements.reduce((s,m)=>s+m.amount,0),250);assert.equal(result.cashMovements.find(m=>m.orderId==="sp-1")?.date,"2026-11-24");
+});
