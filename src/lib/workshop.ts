@@ -96,7 +96,9 @@ export function confirmPayment(order: StoredOrder, paymentId: string, now = new 
   const payments = order.payments.map((payment) => {
     if (payment.id !== paymentId) return payment;
     found = true;
-    if (payment.status === "cancelled") throw new Error("Un paiement annulé ne peut pas être encaissé.");
+    if (payment.method !== "Chèque" || payment.status !== "pending") {
+      throw new Error("Seul un chèque en attente peut être confirmé.");
+    }
     return { ...payment, status: "confirmed" as const };
   });
   if (!found) throw new Error("Paiement introuvable.");
@@ -120,7 +122,9 @@ export function addRefund(order: StoredOrder, refund: Refund, now = new Date().t
 export function confirmRefund(order: StoredOrder, refundId: string, now = new Date().toISOString()): StoredOrder {
   const refund = order.refunds.find(item => item.id === refundId);
   if (!refund) throw new Error("Remboursement introuvable.");
-  if (refund.status === "confirmed") throw new Error("Ce remboursement est déjà confirmé.");
+  if (refund.method !== "Chèque" || refund.status !== "pending") {
+    throw new Error("Seul un remboursement par chèque en attente peut être confirmé.");
+  }
   const collected = order.payments.filter(payment => payment.status === "confirmed")
     .reduce((sum, payment) => sum + payment.amount, 0);
   const alreadyRefunded = order.refunds.filter(item => item.status === "confirmed")
