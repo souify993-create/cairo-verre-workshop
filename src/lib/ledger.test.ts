@@ -95,7 +95,7 @@ test("supplier cheques remain outside cash until confirmed",()=>{
 
 
 test("integrated order, cheque, refund, stock and supplier settlement flow stays consistent on rebuild",()=>{
- const draft={id:"flow-1",number:"CV-FLOW-1",customer:"",createdAt:"2026-11-25T09:00:00.000Z",glass:[],services:[],accessories:[{label:"Poignée",quantity:2,unitPrice:10}],total:200};
+ const draft={id:"flow-1",number:"CV-FLOW-1",customer:"",createdAt:"2026-11-25T09:00:00.000Z",glass:[],services:[],accessories:[{label:"Poignée",quantity:2,unitPrice:100}],total:200};
  let order=markOrderDelivered(orderFromDraft(draft),"Client Flow");
  order=addPayment(order,{id:"cash-flow",method:"Espèces",amount:100,status:"confirmed",date:"2026-11-25"});
  order=addPayment(order,{id:"cheque-flow",method:"Chèque",amount:100,status:"pending",date:"2026-11-25"});
