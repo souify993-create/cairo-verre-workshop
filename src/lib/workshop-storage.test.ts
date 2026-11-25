@@ -97,3 +97,10 @@ test("supplier invoice storage preserves multiple lines and rejects impossible p
  const unpaid=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[{...invoice,paidAmount:10,paymentMethod:"Non réglé"}]}));
  assert.equal(unpaid.supplierInvoices.length,0);
 });
+
+
+test("supplier invoice later payments persist and cannot exceed invoice total",()=>{
+ const invoice={id:"inv-pay",supplier:"Fournisseur C",invoiceNumber:"FC-1",date:"2026-11-25",category:"accessory",lines:[{label:"Poignée",quantity:2,unitPrice:10}],totalHT:20,totalTVA:4,totalTTC:24,paidAmount:10,paymentMethod:"Espèces",paidDate:"2026-11-25",payments:[{id:"p1",date:"2026-11-26",amount:14,method:"Virement"}]};
+ const valid=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[invoice]}));assert.equal(valid.supplierInvoices.length,1);assert.equal(valid.supplierInvoices[0].payments?.[0].amount,14);
+ const over=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[{...invoice,payments:[{...invoice.payments[0],amount:15}]}]}));assert.equal(over.supplierInvoices.length,0);
+});
