@@ -12,7 +12,7 @@ const remainingFor = (order: StoredOrder) => {
 
 export function CaissePaymentPanel({ orders, onRecordPayment }: {
   orders: StoredOrder[];
-  onRecordPayment: (order: StoredOrder, amount: number, method: Method) => Promise<void>;
+  onRecordPayment: (order: StoredOrder, amount: number, method: Method) => Promise<boolean>;
 }) {
   const eligible = useMemo(() => orders.filter(o => o.status === "delivered" && o.customer.trim() && remainingFor(o) > 0.009), [orders]);
   const customers = useMemo(() => [...new Set(eligible.map(o => o.customer.trim()))].sort((a, b) => a.localeCompare(b, "fr")), [eligible]);
@@ -46,7 +46,7 @@ export function CaissePaymentPanel({ orders, onRecordPayment }: {
       <div className="draft-actions" style={{ marginTop: 14 }}><button className="add-btn" disabled={!selectedOrder || !validAmount || saving} onClick={async () => {
         if (!selectedOrder || !validAmount) return;
         setSaving(true);
-        try { await onRecordPayment(selectedOrder, parsed, method); setAmount(""); }
+        try { if (await onRecordPayment(selectedOrder, parsed, method)) setAmount(""); }
         finally { setSaving(false); }
       }}>{saving ? "Enregistrement…" : "Enregistrer l'encaissement"}</button></div>
       {(method === "Chèque" || method === "Effet") && <p className="local-note">Le chèque ou l'effet sera enregistré en attente et n'apparaîtra dans les entrées du journalier qu'après confirmation de son encaissement.</p>}
