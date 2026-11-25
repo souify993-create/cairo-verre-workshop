@@ -24,6 +24,8 @@ Use a delivered test order of 200 MAD.
 ## 3. Accessory stock and supplier invoice
 - [ ] Record an accessory supplier invoice with at least two different lines. Confirm each line adds its own quantity to the corresponding stock item.
 - [ ] Record the invoice as unpaid. It must not create a cash outflow.
+- [ ] Record an initial supplier cheque at invoice entry. It must appear as pending, leave the paid balance unchanged, and create no cash outflow.
+- [ ] Confirm that initial cheque only after actual encashment; the confirmation date must become its cash-outflow date.
 - [ ] Add a partial cash or bank-transfer settlement. Paid balance and cash outflow must increase by exactly the settled amount.
 - [ ] Add a supplier cheque. It must remain pending and must not increase paid balance or cash outflow.
 - [ ] Confirm cheque encashment with the actual date. Paid balance and cash outflow must then include it exactly once.
