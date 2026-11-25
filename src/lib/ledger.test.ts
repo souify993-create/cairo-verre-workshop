@@ -85,3 +85,9 @@ test("later supplier settlements are separate dated cash outflows",()=>{
  const result=deriveLedger([],[],[{id:"inv",supplier:"Fournisseur",invoiceNumber:"FV-8",paidAmount:100,paymentMethod:"Espèces",paidDate:"2026-11-20",payments:[{id:"sp-1",date:"2026-11-24",amount:150,method:"Virement"}]}]);
  assert.equal(result.cashMovements.length,2);assert.equal(result.cashMovements.reduce((s,m)=>s+m.amount,0),250);assert.equal(result.cashMovements.find(m=>m.orderId==="sp-1")?.date,"2026-11-24");
 });
+
+
+test("supplier cheques remain outside cash until confirmed",()=>{
+ const result=deriveLedger([],[],[{id:"inv-cheque",supplier:"Fournisseur",invoiceNumber:"F-CH",paidAmount:0,paymentMethod:"Non réglé",payments:[{id:"sp-pending",date:"2026-11-25",amount:300,method:"Chèque",status:"pending"},{id:"sp-confirmed",date:"2026-11-26",amount:100,method:"Chèque",status:"confirmed"}]}]);
+ assert.equal(result.cashMovements.length,1);assert.equal(result.cashMovements[0].amount,100);assert.equal(result.cashMovements[0].date,"2026-11-26");
+});
