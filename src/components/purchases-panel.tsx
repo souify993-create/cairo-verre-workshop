@@ -56,7 +56,7 @@ export function PurchasesPanel({invoices,onAdd,onUpdate}:{invoices:SupplierInvoi
     <label className="field"><span>Total TTC (facture)</span><input className="text-input" type="number" min="0" value={totalTTC} onChange={e=>setTotalTTC(Number(e.target.value))}/></label>
     <label className="field"><span>{method==="Chèque"?"Montant du chèque remis (en attente)":"Montant réellement payé"}</span><input className="text-input" type="number" min="0" max={totalTTC} value={paidAmount} onChange={e=>setPaidAmount(Number(e.target.value))}/></label>
     <label className="field"><span>Mode de paiement</span><select className="text-input" value={method} onChange={e=>setMethod(e.target.value as typeof method)}><option>Non réglé</option><option>Espèces</option><option>Virement</option><option>Chèque</option></select></label>
-    {paidAmount>0&&<label className="field"><span>Date du paiement effectif</span><input className="text-input" type="date" value={paidDate} onChange={e=>setPaidDate(e.target.value)}/></label>}
+    {paidAmount>0&&method!=="Chèque"&&<label className="field"><span>Date du paiement effectif</span><input className="text-input" type="date" value={paidDate} onChange={e=>setPaidDate(e.target.value)}/></label>}
     {method==="Chèque"&&<><label className="field"><span>Numéro du chèque</span><input className="text-input" value={chequeNumber} onChange={e=>setChequeNumber(e.target.value)}/></label><label className="field"><span>Date du chèque</span><input className="text-input" type="date" value={chequeDate} onChange={e=>setChequeDate(e.target.value)}/></label></>}
    </div>
    {method==="Chèque"&&<p className="local-note">Le chèque remis reste en attente et ne réduit pas le solde fournisseur avant confirmation de son encaissement effectif.</p>}
