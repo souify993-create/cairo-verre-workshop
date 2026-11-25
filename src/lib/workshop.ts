@@ -156,7 +156,7 @@ export function addPayment(
   const recorded: Payment = {
     ...payment,
     date: payment.date ?? now.slice(0, 10),
-    status: payment.method === "Chèque" ? "pending" : "confirmed",
+    status: payment.method === "Chèque" || payment.method === "Effet" ? "pending" : "confirmed",
   };
   return { ...order, payments: [...order.payments, recorded], updatedAt: now };
 }
@@ -178,7 +178,7 @@ export function confirmPayment(order: StoredOrder, paymentId: string, now = new 
 export function addRefund(order: StoredOrder, refund: Refund, now = new Date().toISOString()): StoredOrder {
   if (!Number.isFinite(refund.amount) || refund.amount <= 0) throw new Error("Le montant du remboursement doit être supérieur à zéro.");
   if (order.refunds.some((item) => item.id === refund.id)) throw new Error("Identifiant de remboursement déjà utilisé.");
-  const status = refund.method === "Chèque" ? "pending" : refund.status;
+  const status = refund.method === "Chèque" || refund.method === "Effet" ? "pending" : refund.status;
   if (status === "confirmed") {
     const collected = order.payments.filter(p => p.status === "confirmed").reduce((sum, p) => sum + p.amount, 0);
     const alreadyRefunded = order.refunds.filter(r => r.status === "confirmed").reduce((sum, r) => sum + r.amount, 0);
@@ -192,8 +192,8 @@ export function addRefund(order: StoredOrder, refund: Refund, now = new Date().t
 export function confirmRefund(order: StoredOrder, refundId: string, now = new Date().toISOString()): StoredOrder {
   const refund = order.refunds.find(item => item.id === refundId);
   if (!refund) throw new Error("Remboursement introuvable.");
-  if (refund.method !== "Chèque" || refund.status !== "pending") {
-    throw new Error("Seul un remboursement par chèque en attente peut être confirmé.");
+  if ((refund.method !== "Chèque" && refund.method !== "Effet") || refund.status !== "pending") {
+    throw new Error("Seul un remboursement par chèque ou effet en attente peut être confirmé.");
   }
   const collected = order.payments.filter(payment => payment.status === "confirmed")
     .reduce((sum, payment) => sum + payment.amount, 0);
