@@ -10,7 +10,8 @@ New, independent application for Cairo Verre. This repository is intentionally s
 - Six linear-meter services; other services calculated by square metres
 - Drafts can be reopened, edited and deleted
 - Devis, BP, BL and Facture can be printed directly from a saved draft; printouts do not expose the internal draft status
-- Automated calculation tests and a CI workflow for typecheck, tests and production build
+- Pure delivery ledger engine: drafts are inert; delivered orders derive accessory consumption, confirmed cash movements, customer balances, credit and actual refunds; cancellations preserve real collections
+- Automated calculation and ledger tests; CI workflow for typecheck, tests and production build
 - Drafts stored locally in this first UI milestone only
 
 ## Important
