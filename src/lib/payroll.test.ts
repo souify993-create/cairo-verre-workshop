@@ -23,6 +23,15 @@ test("salary settlement cannot exceed remaining amount and cash movements includ
  assert.equal(summarizePayroll(paid,employee).remaining,0);
  assert.throws(()=>addSalaryPayment(week,employee,[],{id:"s2",date:"2026-11-29",amount:1001,method:"Espèces"}));
  const movements=derivePayrollMovements([paid],[employee]);
- assert.equal(movements.length,2);assert.equal(movements.reduce((s,m)=>s+m.amount,0),1200);
+ assert.equal(movements.length,7);assert.equal(movements.filter(m=>m.kind==="Avance salaire").reduce((s,m)=>s+m.amount,0),200);assert.equal(movements.filter(m=>m.kind==="Salaire").reduce((s,m)=>s+m.amount,0),1000);assert.equal(movements.reduce((s,m)=>s+m.amount,0),1200);
  assert.ok(movements.every(m=>m.direction==="Sortie"));
+});
+
+test("daily salary allocations plus advances equal earned wages without double counting",()=>{
+ const rows=derivePayrollMovements([week],[employee]);
+ const salary=rows.filter(x=>x.kind==="Salaire");
+ assert.equal(salary.length,6);
+ assert.equal(salary.reduce((s,x)=>s+x.amount,0),1000);
+ assert.equal(rows.filter(x=>x.kind==="Avance salaire").reduce((s,x)=>s+x.amount,0),200);
+ assert.equal(rows.reduce((s,x)=>s+x.amount,0),1200);
 });
