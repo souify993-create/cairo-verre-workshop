@@ -23,7 +23,7 @@ test("workshop store reads valid orders and accessory purchases", () => {
 test("workshop store rejects unsupported versions and malformed JSON", () => {
   assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [] });
   assert.deepEqual(decodeWorkshopStore(JSON.stringify({ version: 2, orders: [delivered], accessoryPurchases: [] })),
-    { version: 1, orders: [], accessoryPurchases: [] });
+    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [] });
 });
 
 test("workshop store filters malformed order records", () => {
@@ -49,4 +49,12 @@ test("supplier invoices are retained and glass invoices do not imply accessory s
 test("older local stores remain readable without supplier invoice data", () => {
   const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [] }));
   assert.deepEqual(decoded.supplierInvoices, []);
+});
+
+
+test("older payment records without cash dates remain valid and are not assigned invented dates", () => {
+  const oldOrder = { ...delivered, payments: [{ id: "old-p", method: "Espèces", amount: 20, status: "confirmed" }] };
+  const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [oldOrder], accessoryPurchases: [] }));
+  assert.equal(decoded.orders.length, 1);
+  assert.equal(decoded.orders[0].payments[0].date, undefined);
 });
