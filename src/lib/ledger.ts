@@ -52,7 +52,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       if (order.status === "delivered") row.total += positive(order.totalTTC);
       customerMap.set(customer, row);
     }
-    if (order.status === "delivered") for (const use of order.accessories) {
+    if (order.status === "delivered") for (const avoir of order.avoirs || []) {\n      if (avoir.status === "pending" && customer) customerMap.get(customer)!.avoir += positive(avoir.amount);\n    }\n    if (order.status === "delivered") for (const use of order.accessories) {
       const row = stockMap.get(use.accessoryId) ?? { label: use.label, purchased: 0, consumed: 0 };
       row.label = use.label || row.label;
       row.consumed += positive(use.quantity);
@@ -80,7 +80,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       cashMovements.push({ orderId: invoice.id, reference: invoice.invoiceNumber, method: invoice.paymentMethod, direction: "Sortie", amount: initialAmount, kind: "Achat fournisseur", counterparty: invoice.supplier, ...(invoice.paidDate ? { date: invoice.paidDate } : {}) });
     }
     for (const payment of invoice.payments || []) {
-      if (payment.status === "pending" || payment.status === "cancelled" || (!payment.status && payment.method === "Chèque")) continue;
+      if (payment.status === "pending" || payment.status === "cancelled" || (!payment.status && (payment.method === "Chèque" || payment.method === "Effet"))) continue;
       const amount = positive(payment.amount);
       if (amount > 0) cashMovements.push({ orderId: payment.id, reference: payment.reference || invoice.invoiceNumber, method: payment.method, direction: "Sortie", amount, kind: "Achat fournisseur", counterparty: invoice.supplier, date: payment.date });
     }
