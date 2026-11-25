@@ -44,11 +44,11 @@ Use a delivered test order of 200 MAD.
 - [ ] Repeat the same ledger view/reload several times. Totals and movement counts must remain unchanged; derived movements must not accumulate duplicates.
 - [ ] Test on a second browser/device only after a backup; current data is browser-local and is not yet synchronized between devices.
 
-## Release and account sequence
+## Cloudflare Workers preview checks\n\n- [ ] Build the Next.js app with the OpenNext Cloudflare adapter.\n- [ ] Run the local Workers preview and verify the home screen, navigation, quote calculator, draft persistence and print layouts.\n- [ ] Confirm the preview is served by the Cloudflare Workers runtime, not only the standard Next.js Node server.\n- [ ] Check that the Worker bundle is within the account plan size limit and that no real company data or secrets are included.\n- [ ] Only after all local preview checks pass, deploy the pilot to the dedicated `glass-management` Worker.\n- [ ] Verify the deployed `souify993.workers.dev` URL, then proceed to shared database and admin accounts as specified below.\n\n## Release and account sequence
 
 1. Complete typecheck, automated tests, and production build successfully.
 2. Complete every manual QA item above in a preview/test environment using test-only records.
-3. Publish the verified pilot version without sign-in, as requested.
+3. Publish the verified pilot version without sign-in to Cloudflare Workers (`glass-management`), as requested.
 4. Run the same smoke tests on the published URL before treating the release as verified.
 5. Only after the published version is verified, implement persistent shared database storage and secure admin authentication, then create the two admin accounts.
 6. Re-run the full QA checklist after the database and authentication changes.
