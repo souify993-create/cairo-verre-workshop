@@ -1,11 +1,11 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Calculator, ClipboardList, Users, Package, Wallet, FileText, Settings, Plus, Trash2, Save, CheckCircle2, Search, PanelLeftClose } from "lucide-react";
 import { AccessoryLine, GlassLine, LINEAR_SERVICES, ServiceLine, quoteTotals, areaM2, serviceUnit, isValidQuote } from "@/lib/calculations";
-import { readDrafts, writeDrafts } from "@/lib/storage";
+import { decodeDraftStore, readDrafts, writeDrafts } from "@/lib/storage";
 import { addPayment, addRefund, cancelOrder, confirmPayment, confirmRefund, markOrderDelivered, orderFromDraft } from "@/lib/workshop";
 import { deriveLedger } from "@/lib/ledger";
-import { readWorkshopStore, writeWorkshopStore } from "@/lib/workshop-storage";
+import { decodeWorkshopStore, readWorkshopStore, writeWorkshopStore } from "@/lib/workshop-storage";
 import type { StoredOrder } from "@/lib/workshop";
 import type { WorkshopStore } from "@/lib/workshop-storage";
 import type { Draft } from "@/lib/storage";
@@ -19,10 +19,13 @@ import { derivePayrollCashMovements } from "@/lib/payroll";
 import { PersonnelPanel } from "@/components/personnel-panel";
 import { AdminLogin } from "@/components/admin-login";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
+import { loadCloudWorkshop, saveCloudWorkshop } from "@/lib/cloud-workshop";
 const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:ClipboardList},{label:"La caisse",icon:Wallet},{label:"Journalier",icon:FileText},{label:"Clients & fournisseurs",icon:Users},{label:"Personnel",icon:Users},{label:"Stock",icon:Package},{label:"Dépense",icon:Wallet}];
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 export default function Home(){
  const [authReady,setAuthReady]=useState(false),[isAdmin,setIsAdmin]=useState(false);
+ const [cloudReady,setCloudReady]=useState(false),[cloudError,setCloudError]=useState("");
+ const cloudRevision=useRef(0);
  const [section,setSection]=useState("Calcul"),[collapsed,setCollapsed]=useState(false),[customer,setCustomer]=useState("");
  const [glass,setGlass]=useState<GlassLine[]>([]),[services,setServices]=useState<ServiceLine[]>([]),[accessories,setAccessories]=useState<AccessoryLine[]>([]);
  const [drafts,setDrafts]=useState<Draft[]>([]),[saved,setSaved]=useState(false),[editingId,setEditingId]=useState<string|null>(null);
@@ -43,25 +46,89 @@ export default function Home(){
   });
   return ()=>{active=false;subscription.unsubscribe();};
  },[]);
+ useEffect(()=>{
+  if(!isAdmin){setCloudReady(false);return;}
+  let active=true;
+  const initialize=async()=>{
+   const supabase=createSupabaseBrowserClient();
+   try{
+    let snapshot=await loadCloudWorkshop(supabase);
+    if(!snapshot){
+     const localPayload={...readWorkshopStore(),drafts:readDrafts()};
+     try{
+      const revision=await saveCloudWorkshop(supabase,localPayload,0);
+      if(!active)return;
+      cloudRevision.current=revision;
+      setWorkshop({...localPayload,version:1});
+      setDrafts(localPayload.drafts);
+      setCloudReady(true);
+      writeWorkshopStore(localPayload);
+      writeDrafts(localPayload.drafts);
+      return;
+     }catch(firstError){
+      snapshot=await loadCloudWorkshop(supabase);
+      if(!snapshot)throw firstError;
+     }
+    }
+    if(!active)return;
+    const payload=snapshot.payload;
+    const normalized=decodeWorkshopStore(JSON.stringify(payload));
+    const normalizedDrafts=decodeDraftStore(JSON.stringify(payload.drafts));
+    cloudRevision.current=snapshot.revision;
+    setWorkshop(normalized);
+    setDrafts(normalizedDrafts);
+    writeWorkshopStore(normalized);
+    writeDrafts(normalizedDrafts);
+    setCloudError("");
+    setCloudReady(true);
+   }catch(error){
+    if(!active)return;
+    setCloudError(error instanceof Error?error.message:"Impossible de charger les données partagées.");
+    setCloudReady(false);
+   }
+  };
+  void initialize();
+  return ()=>{active=false;};
+ },[isAdmin]);
  const totals=useMemo(()=>quoteTotals(glass,services,accessories),[glass,services,accessories]);
   const validQuote=isValidQuote(glass,services,accessories);
- const persistDraft=()=>{if(!validQuote){alert("Complétez les désignations, dimensions et quantités avant d’enregistrer le devis.");return;}const existing=drafts.find(x=>x.id===editingId);const d:Draft={id:existing?.id||crypto.randomUUID(),number:existing?.number||"CV-"+String(Date.now()).slice(-6),customer,createdAt:existing?.createdAt||new Date().toISOString(),glass,services,accessories,total:totals.ttc};const next=existing?drafts.map(x=>x.id===d.id?d:x):[d,...drafts];if(!writeDrafts(next)){alert("Impossible d’enregistrer les données sur cet appareil. Vérifiez l’espace disponible et les paramètres du navigateur.");return;}setDrafts(next);setEditingId(d.id);setSaved(true);window.setTimeout(()=>setSaved(false),2500);};
- const saveWorkshop=(next:WorkshopStore)=>{if(!writeWorkshopStore(next)){alert("Impossible d’enregistrer la commande sur cet appareil.");return false;}setWorkshop(next);return true;};
- const addAccessoryPurchase=(purchase:{accessoryId:string;label:string;quantity:number})=>{if(!Number.isFinite(purchase.quantity)||purchase.quantity<=0)return;saveWorkshop({...workshop,accessoryPurchases:[...workshop.accessoryPurchases,purchase]});};
- const addExpense=(expense:ExpenseRecord)=>{saveWorkshop({...workshop,expenses:[expense,...(workshop.expenses||[])]});};
- const updateSupplierInvoice=(invoice:WorkshopStore["supplierInvoices"][number])=>{saveWorkshop({...workshop,supplierInvoices:workshop.supplierInvoices.map(x=>x.id===invoice.id?invoice:x)});};
- const addSupplierInvoice=(invoice:WorkshopStore["supplierInvoices"][number])=>{const additions=invoice.category==="accessory"?invoice.lines.map(line=>{const key=line.label.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"accessoire-sans-nom";return {accessoryId:key,label:line.label.trim(),quantity:line.quantity};}):[];saveWorkshop({...workshop,supplierInvoices:[invoice,...workshop.supplierInvoices],accessoryPurchases:[...workshop.accessoryPurchases,...additions]});};
- const deliverDraft=(d:Draft)=>{try{if(workshop.orders.some(o=>o.id===d.id)){alert("Cette commande existe déjà dans la liste des commandes.");return;}const base=orderFromDraft(d);const delivered=markOrderDelivered(base,d.customer);const next={...workshop,orders:[delivered,...workshop.orders]};if(!saveWorkshop(next))return;const remaining=drafts.filter(x=>x.id!==d.id);if(!writeDrafts(remaining)){alert("La commande a été livrée, mais la suppression du brouillon n’a pas pu être enregistrée. Ne relivrez pas cette commande.");return;}setDrafts(remaining);if(editingId===d.id)setEditingId(null);}catch(error){alert(error instanceof Error?error.message:"Erreur lors de la livraison.");}};
- const recordPayment=(order:StoredOrder)=>{const raw=window.prompt("Montant reçu (DH)");if(raw===null)return;const amount=Number(raw);if(!Number.isFinite(amount)||amount<=0){alert("Montant invalide.");return;}const methodRaw=window.prompt("Mode : Espèces, Virement ou Chèque","Espèces");if(methodRaw===null)return;const method=methodRaw.trim();if(!["Espèces","Virement","Chèque"].includes(method)){alert("Mode de paiement invalide.");return;}try{const updated=addPayment(order,{id:crypto.randomUUID(),method:method as "Espèces"|"Virement"|"Chèque",amount,status:"pending"});saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});}catch(error){alert(error instanceof Error?error.message:"Erreur paiement.");}};
- const recordRefund=(order:StoredOrder)=>{const raw=window.prompt("Montant du remboursement au client (DH)");if(raw===null)return;const amount=Number(raw);if(!Number.isFinite(amount)||amount<=0){alert("Montant invalide.");return;}const methodRaw=window.prompt("Mode de remboursement : Espèces, Virement ou Chèque","Espèces");if(methodRaw===null)return;const method=methodRaw.trim();if(!["Espèces","Virement","Chèque"].includes(method)){alert("Mode invalide.");return;}try{const updated=addRefund(order,{id:crypto.randomUUID(),method:method as "Espèces"|"Virement"|"Chèque",amount,status:method==="Chèque"?"pending":"confirmed"});saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});}catch(error){alert(error instanceof Error?error.message:"Erreur remboursement.");}};
- const collectCheque=(order:StoredOrder,paymentId:string)=>{try{const updated=confirmPayment(order,paymentId);saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});}catch(error){alert(error instanceof Error?error.message:"Erreur de confirmation.");}};
- const confirmChequeRefund=(order:StoredOrder,refundId:string)=>{try{const updated=confirmRefund(order,refundId);saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});}catch(error){alert(error instanceof Error?error.message:"Erreur de confirmation du remboursement.");}};
- const cancelDelivered=(order:StoredOrder)=>{if(!window.confirm("Annuler cette commande ? Les encaissements déjà confirmés resteront dans la caisse et devront être remboursés séparément si nécessaire."))return;const updated=cancelOrder(order);saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});};
+ const persistCloudState=async(nextWorkshop:WorkshopStore,nextDrafts:Draft[])=>{
+  if(!cloudReady){alert("Les données partagées ne sont pas encore prêtes. Réessayez dans un instant.");return false;}
+  try{
+   const revision=await saveCloudWorkshop(createSupabaseBrowserClient(),{...nextWorkshop,drafts:nextDrafts},cloudRevision.current);
+   cloudRevision.current=revision;
+   setWorkshop(nextWorkshop);setDrafts(nextDrafts);
+   const workshopCached=writeWorkshopStore(nextWorkshop),draftsCached=writeDrafts(nextDrafts);
+   if(!workshopCached||!draftsCached)alert("Enregistrement cloud réussi, mais la copie locale de secours n’a pas pu être actualisée.");
+   return true;
+  }catch(error){
+   const message=error instanceof Error?error.message:"Erreur de synchronisation.";
+   if(message.includes("REVISION_CONFLICT")||message.includes("40001")){
+    setCloudReady(false);
+    setCloudError("Une autre session a modifié les données. Rechargez la page pour récupérer la dernière version avant de réessayer.");
+    alert("Conflit de synchronisation : une autre session a modifié les données. Rechargez la page avant de réessayer.");
+   }else alert("Échec de l’enregistrement partagé : "+message);
+   return false;
+  }
+ };
+ const persistDraft=async()=>{if(!validQuote){alert("Complétez les désignations, dimensions et quantités avant d’enregistrer le devis.");return;}const existing=drafts.find(x=>x.id===editingId);const d:Draft={id:existing?.id||crypto.randomUUID(),number:existing?.number||"CV-"+String(Date.now()).slice(-6),customer,createdAt:existing?.createdAt||new Date().toISOString(),glass,services,accessories,total:totals.ttc};const next=existing?drafts.map(x=>x.id===d.id?d:x):[d,...drafts];if(!await persistCloudState(workshop,next))return;setEditingId(d.id);setSaved(true);window.setTimeout(()=>setSaved(false),2500);};
+ const saveWorkshop=async(next:WorkshopStore)=>persistCloudState(next,drafts);
+ const addAccessoryPurchase=async(purchase:{accessoryId:string;label:string;quantity:number})=>{if(!Number.isFinite(purchase.quantity)||purchase.quantity<=0)return;await saveWorkshop({...workshop,accessoryPurchases:[...workshop.accessoryPurchases,purchase]});};
+ const addExpense=async(expense:ExpenseRecord)=>{await saveWorkshop({...workshop,expenses:[expense,...(workshop.expenses||[])]});};
+ const updateSupplierInvoice=async(invoice:WorkshopStore["supplierInvoices"][number])=>{await saveWorkshop({...workshop,supplierInvoices:workshop.supplierInvoices.map(x=>x.id===invoice.id?invoice:x)});};
+ const addSupplierInvoice=async(invoice:WorkshopStore["supplierInvoices"][number])=>{const additions=invoice.category==="accessory"?invoice.lines.map(line=>{const key=line.label.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"accessoire-sans-nom";return {accessoryId:key,label:line.label.trim(),quantity:line.quantity};}):[];await saveWorkshop({...workshop,supplierInvoices:[invoice,...workshop.supplierInvoices],accessoryPurchases:[...workshop.accessoryPurchases,...additions]});};
+ const deliverDraft=async(d:Draft)=>{try{if(workshop.orders.some(o=>o.id===d.id)){alert("Cette commande existe déjà dans la liste des commandes.");return;}const base=orderFromDraft(d);const delivered=markOrderDelivered(base,d.customer);const next={...workshop,orders:[delivered,...workshop.orders]};const remaining=drafts.filter(x=>x.id!==d.id);if(!await persistCloudState(next,remaining))return;if(editingId===d.id)setEditingId(null);}catch(error){alert(error instanceof Error?error.message:"Erreur lors de la livraison.");}};
+ const recordPayment=async(order:StoredOrder)=>{const raw=window.prompt("Montant reçu (DH)");if(raw===null)return;const amount=Number(raw);if(!Number.isFinite(amount)||amount<=0){alert("Montant invalide.");return;}const methodRaw=window.prompt("Mode : Espèces, Virement ou Chèque","Espèces");if(methodRaw===null)return;const method=methodRaw.trim();if(!["Espèces","Virement","Chèque"].includes(method)){alert("Mode de paiement invalide.");return;}try{const updated=addPayment(order,{id:crypto.randomUUID(),method:method as "Espèces"|"Virement"|"Chèque",amount,status:"pending"});await saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});}catch(error){alert(error instanceof Error?error.message:"Erreur paiement.");}};
+ const recordRefund=async(order:StoredOrder)=>{const raw=window.prompt("Montant du remboursement au client (DH)");if(raw===null)return;const amount=Number(raw);if(!Number.isFinite(amount)||amount<=0){alert("Montant invalide.");return;}const methodRaw=window.prompt("Mode de remboursement : Espèces, Virement ou Chèque","Espèces");if(methodRaw===null)return;const method=methodRaw.trim();if(!["Espèces","Virement","Chèque"].includes(method)){alert("Mode invalide.");return;}try{const updated=addRefund(order,{id:crypto.randomUUID(),method:method as "Espèces"|"Virement"|"Chèque",amount,status:method==="Chèque"?"pending":"confirmed"});await saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});}catch(error){alert(error instanceof Error?error.message:"Erreur remboursement.");}};
+ const collectCheque=async(order:StoredOrder,paymentId:string)=>{try{const updated=confirmPayment(order,paymentId);await saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});}catch(error){alert(error instanceof Error?error.message:"Erreur de confirmation.");}};
+ const confirmChequeRefund=async(order:StoredOrder,refundId:string)=>{try{const updated=confirmRefund(order,refundId);await saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});}catch(error){alert(error instanceof Error?error.message:"Erreur de confirmation du remboursement.");}};
+ const cancelDelivered=async(order:StoredOrder)=>{if(!window.confirm("Annuler cette commande ? Les encaissements déjà confirmés resteront dans la caisse et devront être remboursés séparément si nécessaire."))return;const updated=cancelOrder(order);await saveWorkshop({...workshop,orders:workshop.orders.map(o=>o.id===order.id?updated:o)});};
  const updateGlass=(i:number,p:Partial<GlassLine>)=>setGlass(a=>a.map((x,n)=>n===i?{...x,...p}:x));
  const updateService=(i:number,p:Partial<ServiceLine>)=>setServices(a=>a.map((x,n)=>n===i?{...x,...p,...(p.name!==undefined?{unit:serviceUnit(p.name)}:{})}:x));
  const updateAccessory=(i:number,p:Partial<AccessoryLine>)=>setAccessories(a=>a.map((x,n)=>n===i?{...x,...p}:x));
  if(!authReady)return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#f4f6f8",color:"#263746",fontFamily:"Arial,sans-serif"}}>Chargement de l’espace administrateur…</main>;
  if(!isAdmin)return <AdminLogin onAuthenticated={()=>setIsAdmin(true)}/>;
+ if(!cloudReady)return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#f4f6f8",color:"#263746",fontFamily:"Arial,sans-serif",padding:24,textAlign:"center"}}>{cloudError||"Chargement des données partagées de Cairo Verre…"}</main>;
  return <main className="shell">
  <aside className={collapsed?"sidebar collapsed":"sidebar"}><div className="brand"><div className="brand-mark">CV</div>{!collapsed&&<div><strong>CAIRO VERRE</strong><small>ATELIER · MEDIOUNA</small></div>}</div><button className="collapse" onClick={()=>setCollapsed(!collapsed)} aria-label="Réduire le menu"><PanelLeftClose size={17}/></button><div className="nav-caption">{!collapsed&&"ESPACE DE TRAVAIL"}</div>
  {nav.map(item=><button key={item.label} className={"nav-item "+(section===item.label?"active":"")} onClick={()=>setSection(item.label)} title={item.label}><item.icon size={18}/>{!collapsed&&<span>{item.label}</span>}</button>)}<div className="sidebar-bottom"><Settings size={17}/>{!collapsed&&<span>Paramètres</span>}</div></aside>
