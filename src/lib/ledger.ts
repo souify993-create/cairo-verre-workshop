@@ -29,7 +29,7 @@ const positive = (n: number) => Number.isFinite(n) ? Math.max(0, n) : 0;
  * Drafts never affect stock, customer balances or the cash journal.
  * Re-running after an edit does not append duplicate movements.
  */
-export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurchase[], supplierInvoices: { id: string; supplier: string; invoiceNumber: string; paidAmount: number; paymentMethod: PaymentMethod | "Non réglé"; paidDate?: string; payments?: {id:string;date:string;amount:number;method:PaymentMethod;status?:"pending"|"confirmed";reference?:string}[] }[] = []): LedgerSnapshot {
+export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurchase[], supplierInvoices: { id: string; supplier: string; invoiceNumber: string; paidAmount: number; paymentMethod: PaymentMethod | "Non réglé"; paidDate?: string; payments?: {id:string;date:string;amount:number;method:PaymentMethod;status?:"pending"|"confirmed"|"cancelled";reference?:string}[] }[] = []): LedgerSnapshot {
   const cashMovements: CashMovement[] = [];
   const customerMap = new Map<string, { total: number; paid: number }>();
   const stockMap = new Map<string, { label: string; purchased: number; consumed: number }>();
@@ -57,7 +57,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       stockMap.set(use.accessoryId, row);
     }
     for (const payment of order.payments) {
-      if (payment.status === "pending" || (!payment.status && payment.method === "Chèque")) continue;
+      if (payment.status === "pending" || payment.status === "cancelled" || (!payment.status && payment.method === "Chèque")) continue;
       const amount = positive(payment.amount);
       if (!amount) continue;
       if (customer) customerMap.get(customer)!.paid += amount;
