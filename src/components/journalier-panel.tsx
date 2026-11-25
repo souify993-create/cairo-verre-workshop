@@ -23,7 +23,7 @@ export function JournalierPanel({movements,scheduledMovements=[],expenses,employ
    <div className="summary-line"><span>Total Entrée</span><strong>{money(incoming)}</strong></div>
    <div className="summary-line"><span>Total Sortie</span><strong>{money(outgoing)}</strong></div>
    <div className="summary-divider"/>
-   <div className="total-box"><span>Solde net du jour</span><strong>{money(incoming-outgoing)}</strong></div>
+   <div className="total-box"><span>Solde net du jour</span><strong className={incoming-outgoing<0?"amount-out":"amount-in"}>{money(incoming-outgoing)}</strong></div>
   </section>
   {methods.map(method=>{
    const rows=dated.filter(m=>m.method===method);
@@ -33,12 +33,12 @@ export function JournalierPanel({movements,scheduledMovements=[],expenses,employ
    return <section className="panel" key={method}>
     <div className="panel-heading"><div><h3>{method}</h3><p>Entrée {money(sum(ins))} · Sortie {money(sum(outs))}</p></div></div>
     <div className="form-grid" style={{gridTemplateColumns:"repeat(2,minmax(0,1fr))",gap:16}}>
-     <div><h4>Entrée</h4>{ins.length?ins.map((m,i)=><div className="saved-draft" key={m.orderId+"-in-"+i}><div><strong>{m.reference} · {m.kind}</strong><span>{m.counterparty||"Client"} · {m.date}</span></div><strong>{money(m.amount)}</strong></div>):<div className="empty-inline">Aucune entrée.</div>}</div>
-     <div><h4>Sortie</h4>{outs.length?outs.map((m,i)=><div className="saved-draft" key={m.orderId+"-out-"+i}><div><strong>{m.reference} · {m.kind}</strong><span>{m.counterparty||"—"} · {m.date}</span></div><strong>{money(m.amount)}</strong></div>):<div className="empty-inline">Aucune sortie.</div>}</div>
+     <div><h4>Entrée</h4>{ins.length?ins.map((m,i)=><div className="saved-draft" key={m.orderId+"-in-"+i}><div><strong>{m.reference} {m.counterparty||"Client"}</strong><span>{m.kind} · {m.date}</span></div><strong className="amount-in">{money(m.amount)}</strong></div>):<div className="empty-inline">Aucune entrée.</div>}</div>
+     <div><h4>Sortie</h4>{outs.length?outs.map((m,i)=><div className="saved-draft" key={m.orderId+"-out-"+i}><div><strong>{m.reference} · {m.kind}</strong><span>{m.counterparty||"—"} · {m.date}</span></div><strong className="amount-out">{money(m.amount)}</strong></div>):<div className="empty-inline">Aucune sortie.</div>}</div>
     </div>
    </section>;
   })}
-  {undated.length>0&&<section className="panel"><div className="panel-heading"><div><h3>Date non renseignée</h3><p>حركات قديمة لا تحتوي على تاريخ التحصيل أو الأداء؛ لم نُسند إليها تاريخاً من عندنا.</p></div><strong>{money(undated.reduce((s,m)=>s+(m.direction==="Entrée"?m.amount:-m.amount),0))}</strong></div>{undated.map((m,i)=><div className="saved-draft" key={m.orderId+"-undated-"+i}><div><strong>{m.reference} · {m.kind}</strong><span>{m.counterparty||"—"} · {m.method} · {m.direction}</span></div><strong>{money(m.amount)}</strong></div>)}</section>}
+  {undated.length>0&&<section className="panel"><div className="panel-heading"><div><h3>Date non renseignée</h3><p>حركات قديمة لا تحتوي على تاريخ التحصيل أو الأداء؛ لم نُسند إليها تاريخاً من عندنا.</p></div><strong>{money(undated.reduce((s,m)=>s+(m.direction==="Entrée"?m.amount:-m.amount),0))}</strong></div>{undated.map((m,i)=><div className="saved-draft" key={m.orderId+"-undated-"+i}><div><strong>{m.reference} · {m.kind}</strong><span>{m.counterparty||"—"} · {m.method} · {m.direction}</span></div><strong className={m.direction==="Entrée"?"amount-in":"amount-out"}>{money(m.amount)}</strong></div>)}</section>}
   {!dated.length&&!undated.length&&<section className="panel"><div className="empty-inline">لا توجد حركات مسجلة.</div></section>}
  </div>;
 }
