@@ -120,3 +120,9 @@ test("an initial supplier cheque is not a cash outflow until its payment record 
  assert.equal(collected.cashMovements[0].amount,450);
  assert.equal(collected.cashMovements[0].date,"2026-11-27");
 });
+
+
+test("cancelled supplier cheques never create cash outflows",()=>{
+ const result=deriveLedger([],[],[{id:"inv-cancelled",supplier:"Fournisseur",invoiceNumber:"F-CAN",paidAmount:0,paymentMethod:"Chèque",payments:[{id:"sp-cancelled",date:"2026-11-25",amount:300,method:"Chèque",status:"cancelled"}]}]);
+ assert.equal(result.cashMovements.length,0);
+});
