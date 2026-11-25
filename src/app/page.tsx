@@ -11,7 +11,8 @@ import type { WorkshopStore } from "@/lib/workshop-storage";
 import type { Draft } from "@/lib/storage";
 import { StockPanel } from "@/components/stock-panel";
 import { CustomersPanel } from "@/components/customers-panel";
-import { PurchasesPanel } from "@/components/purchases-panel";\nimport { JournalierPanel } from "@/components/journalier-panel";
+import { PurchasesPanel } from "@/components/purchases-panel";
+import { JournalierPanel } from "@/components/journalier-panel";
 const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:ClipboardList},{label:"La caisse",icon:Wallet},{label:"Journalier",icon:FileText},{label:"Clients & fournisseurs",icon:Users},{label:"Personnel",icon:Users},{label:"Stock",icon:Package},{label:"Dépense",icon:Wallet}];
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 export default function Home(){
