@@ -43,14 +43,14 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
   }
 
   for (const order of orders) {
-    if (order.status !== "delivered") continue;
+    if (order.status === "draft") continue;
     const customer = order.customer.trim();
     if (customer) {
       const row = customerMap.get(customer) ?? { total: 0, paid: 0 };
-      row.total += positive(order.totalTTC);
+      if (order.status === "delivered") row.total += positive(order.totalTTC);
       customerMap.set(customer, row);
     }
-    for (const use of order.accessories) {
+    if (order.status === "delivered") for (const use of order.accessories) {
       const row = stockMap.get(use.accessoryId) ?? { label: use.label, purchased: 0, consumed: 0 };
       row.label = use.label || row.label;
       row.consumed += positive(use.quantity);
