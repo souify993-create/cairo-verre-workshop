@@ -1,11 +1,12 @@
 import type { Draft } from "./storage";
-import type { AccessoryUse, Payment, Refund, WorkshopOrder } from "./ledger";
+import type { AccessoryUse, CustomerAvoir, Payment, Refund, WorkshopOrder } from "./ledger";
 
 export type OrderDocumentLines = Pick<Draft, "glass" | "services" | "accessories">;
 export type StoredOrder = WorkshopOrder & {
   createdAt: string;
   updatedAt: string;
   lines: OrderDocumentLines;
+  avoirs?: CustomerAvoir[];
 };
 
 const accessoryKey = (label: string) =>
@@ -30,6 +31,7 @@ export function orderFromDraft(draft: Draft, now = new Date().toISOString()): St
     accessories,
     payments: [],
     refunds: [],
+    avoirs: [],
     createdAt: draft.createdAt,
     updatedAt: now,
     lines: {
@@ -69,6 +71,8 @@ export function reviseOrder(
 }
 
 /** Revises a delivered order and reconciles its payment method without rewriting its history. */
+/** Delivered orders paid by cheque/effect are intentionally immutable. Cash/bank adjustments
+ * rewrite the original receipt amount and create a separate customer Avoir without a cash outflow. */
 export function reviseDeliveredOrder(
   order: StoredOrder,
   changes: { customer?: string; totalTTC: number; lines: OrderDocumentLines },
@@ -76,41 +80,62 @@ export function reviseDeliveredOrder(
   now = new Date().toISOString(),
 ): StoredOrder {
   if (order.status !== "delivered") throw new Error("Seule une commande livrée peut être modifiée ici.");
-  const revised = reviseOrder(order, changes, now);
   const activePayments = order.payments.filter(payment => payment.status !== "cancelled");
+  if (activePayments.some(payment => payment.method === "Chèque" || payment.method === "Effet")) {
+    throw new Error("Cette commande contient un Chèque ou un Effet : elle ne peut pas être modifiée. Conservez-la ou supprimez-la entièrement.");
+  }
+  const revised = reviseOrder(order, changes, now);
   const methods = [...new Set(activePayments.map(payment => payment.method))];
+  let payments = [...order.payments];
+  let avoirs = [...(order.avoirs || [])];
 
   if (paymentMethod && methods.length > 0 && (methods.length !== 1 || methods[0] !== paymentMethod)) {
-    if (order.refunds.some(refund => refund.status === "confirmed")) {
-      throw new Error("Impossible de changer le mode après un remboursement confirmé. Gardez le mode initial et modifiez le montant.");
-    }
-    const paidAmount = activePayments.reduce((sum, payment) => sum + payment.amount, 0);
-    const payments = order.payments.map(payment => payment.status === "cancelled" ? payment : { ...payment, status: "cancelled" as const });
-    const replacement: Payment[] = paidAmount > 0 ? [{
-      id: crypto.randomUUID(),
-      method: paymentMethod,
-      amount: paidAmount,
-      status: paymentMethod === "Chèque" ? "pending" : "confirmed",
+    const paid = activePayments.filter(payment => payment.status === "confirmed")
+      .reduce((sum, payment) => sum + payment.amount, 0);
+    payments = payments.map(payment => activePayments.some(active => active.id === payment.id)
+      ? { ...payment, status: "cancelled" as const } : payment);
+    const applied = Math.min(paid, revised.totalTTC);
+    if (applied > 0.009) payments.push({
+      id: crypto.randomUUID(), method: paymentMethod, amount: applied,
+      status: paymentMethod === "Chèque" || paymentMethod === "Effet" ? "pending" : "confirmed",
       date: now.slice(0, 10),
-    }] : [];
-    return { ...revised, payments: [...payments, ...replacement], updatedAt: now };
+    });
+    const excess = Math.max(0, paid - revised.totalTTC);
+    if (excess > 0.009) avoirs.push({ id: crypto.randomUUID(), amount: excess, date: now.slice(0, 10), status: "pending" });
+    return { ...revised, payments, avoirs, updatedAt: now };
   }
 
-  // Cash overpayment is returned immediately. Cheque overpayment is deliberately
-  // left as customer credit (Avoir); an increase remains as customer balance due.
-  if (methods.length === 1 && methods[0] === "Espèces") {
-    const received = order.payments.filter(payment => payment.method === "Espèces" && payment.status === "confirmed")
+  if (methods.length === 1 && (methods[0] === "Espèces" || methods[0] === "Virement")) {
+    const received = activePayments.filter(payment => payment.status === "confirmed")
       .reduce((sum, payment) => sum + payment.amount, 0);
-    const alreadyRefunded = order.refunds.filter(refund => refund.method === "Espèces" && refund.status === "confirmed")
-      .reduce((sum, refund) => sum + refund.amount, 0);
-    const refundable = Math.max(0, received - alreadyRefunded - revised.totalTTC);
-    if (refundable > 0.009) {
-      return addRefund(revised, {
-        id: crypto.randomUUID(), method: "Espèces", amount: refundable, status: "confirmed", date: now.slice(0, 10),
-      }, now);
+    if (received > revised.totalTTC + 0.009) {
+      let remaining = revised.totalTTC;
+      payments = payments.map(payment => {
+        if (!activePayments.some(active => active.id === payment.id) || payment.status !== "confirmed") return payment;
+        const kept = Math.min(payment.amount, remaining);
+        remaining = Math.max(0, remaining - kept);
+        return { ...payment, amount: kept };
+      });
+      avoirs.push({
+        id: crypto.randomUUID(),
+        amount: received - revised.totalTTC,
+        date: now.slice(0, 10),
+        status: "pending",
+      });
     }
   }
-  return revised;
+  return { ...revised, payments, avoirs, updatedAt: now };
+}
+
+/** Settling an Avoir only clears the customer credit list; it never creates a cash movement. */
+export function settleCustomerAvoir(order: StoredOrder, avoirId: string, now = new Date().toISOString()): StoredOrder {
+  const avoir = (order.avoirs || []).find(item => item.id === avoirId);
+  if (!avoir || avoir.status !== "pending") throw new Error("Avoir client introuvable ou déjà réglé.");
+  return {
+    ...order,
+    avoirs: (order.avoirs || []).map(item => item.id === avoirId ? { ...item, status: "settled" as const } : item),
+    updatedAt: now,
+  };
 }
 
 export function cancelOrder(order: StoredOrder, now = new Date().toISOString()): StoredOrder {
@@ -141,8 +166,8 @@ export function confirmPayment(order: StoredOrder, paymentId: string, now = new 
   const payments = order.payments.map((payment) => {
     if (payment.id !== paymentId) return payment;
     found = true;
-    if (payment.method !== "Chèque" || payment.status !== "pending") {
-      throw new Error("Seul un chèque en attente peut être confirmé.");
+    if ((payment.method !== "Chèque" && payment.method !== "Effet") || payment.status !== "pending") {
+      throw new Error("Seul un chèque ou effet en attente peut être confirmé.");
     }
     return { ...payment, status: "confirmed" as const };
   });
