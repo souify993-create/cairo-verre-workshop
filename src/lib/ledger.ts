@@ -85,7 +85,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
     for (const payment of invoice.payments || []) {
       if (payment.status === "pending" || payment.status === "cancelled" || (!payment.status && (payment.method === "Chèque" || payment.method === "Effet"))) continue;
       const amount = positive(payment.amount);
-      if (amount > 0) cashMovements.push({ orderId: payment.id, reference: payment.reference || invoice.invoiceNumber, method: payment.method, direction: "Sortie", amount, kind: "Achat fournisseur", counterparty: invoice.supplier, date: payment.date });
+      if (amount > 0) cashMovements.push({ orderId: payment.id, reference: payment.reference || invoice.invoiceNumber, method: payment.method, direction: "Sortie", amount, kind: "Achat fournisseur", counterparty: invoice.supplier, date: payment.dueDate || payment.date });
     }
   }
 
