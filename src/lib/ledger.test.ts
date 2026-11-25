@@ -63,3 +63,19 @@ test("confirmed supplier payments are cash outflows; unpaid cheques are excluded
   assert.equal(result.cashMovements[0].amount, 250);
   assert.equal(result.cashMovements[0].counterparty, "Fournisseur Verre");
 });
+
+
+test("cash movements preserve actual dates and keep legacy records explicitly undated", () => {
+  const result = deriveLedger([order({ payments: [
+    { id: "p-date", method: "Espèces", amount: 120, status: "confirmed", date: "2026-11-25" },
+    { id: "p-old", method: "Virement", amount: 80, status: "confirmed" },
+  ], refunds: [
+    { id: "r-date", method: "Espèces", amount: 20, status: "confirmed", date: "2026-11-25" },
+  ] })], [], [
+    { id: "sup-date", supplier: "Fournisseur", invoiceNumber: "F-1", paidAmount: 30, paymentMethod: "Virement", paidDate: "2026-11-24" },
+  ]);
+  assert.equal(result.cashMovements.find(x => x.kind === "Paiement" && x.method === "Espèces")?.date, "2026-11-25");
+  assert.equal(result.cashMovements.find(x => x.kind === "Paiement" && x.method === "Virement")?.date, undefined);
+  assert.equal(result.cashMovements.find(x => x.kind === "Remboursement")?.direction, "Sortie");
+  assert.equal(result.cashMovements.find(x => x.kind === "Achat fournisseur")?.date, "2026-11-24");
+});
