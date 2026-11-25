@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {areaM2,quoteTotals,serviceUnit,LINEAR_SERVICES,isValidQuote,serviceQuantity,serviceQuantityForGlassLines} from "./calculations";
-test("adds 20 mm to width and height for area pricing only",()=>{assert.equal(areaM2(1000,2000,2),4.1616);assert.equal(areaM2(1120,2065,4),9.5076);});
+test("adds 20 mm to width and height for area pricing only",()=>{assert.equal(areaM2(1000,2000,2),4.1208);assert.equal(areaM2(1120,2065,4),9.5076);});
 test("recognizes all linear services and area services",()=>{
  assert.equal(LINEAR_SERVICES.length,12); for(const n of LINEAR_SERVICES)assert.equal(serviceUnit(n),"ml");
  for(const n of ["COULLAGE UV","SABLAGE","ASSEMBLAGE TRANSPARANT","ASSEMBLAGE OPAL","ASSEMBLAGE OPAC","ASSEMBLAGE NOIR","DESSIN"])assert.equal(serviceUnit(n),"m²");
@@ -14,7 +14,7 @@ test("automatically calculates perimeter and RCT edges",()=>{
 });
 test("calculates TTC totals, HT and TVA",()=>{
  const x=quoteTotals([{label:"Verre",widthMm:1000,heightMm:2000,quantity:1,pricePerM2:100}],[{name:"VID 6",unit:"ml",quantity:3,unitPrice:20}],[{label:"Poignée",quantity:2,unitPrice:15}]);
- assert.equal(x.glassTotal,206.04);assert.equal(x.serviceTotal,60);assert.equal(x.accessoryTotal,30);assert.equal(x.ttc,296.04);assert.equal(x.ht,296.04/1.2);assert.equal(x.tva,296.04-296.04/1.2);
+ assert.equal(x.glassTotal,206.04);assert.equal(x.serviceTotal,60);assert.equal(x.accessoryTotal,30);assert.ok(Math.abs(x.ttc-296.04)<1e-9);assert.ok(Math.abs(x.ht-296.04/1.2)<1e-9);assert.ok(Math.abs(x.tva-(296.04-296.04/1.2))<1e-9);
 });
 test("accepts accessory-only and service-only quotes",()=>{
  assert.equal(isValidQuote([],[],[{label:"Poignée",quantity:2,unitPrice:15}]),true);assert.equal(isValidQuote([],[],[]),false);
