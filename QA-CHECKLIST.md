@@ -43,5 +43,13 @@ Use a delivered test order of 200 MAD.
 - [ ] Repeat the same ledger view/reload several times. Totals and movement counts must remain unchanged; derived movements must not accumulate duplicates.
 - [ ] Test on a second browser/device only after a backup; current data is browser-local and is not yet synchronized between devices.
 
-## Release gate
-Do not create admin accounts, add sign-in, connect a production database, or publish the application until typecheck, tests, build, and the manual checks above have all passed.
+## Release and account sequence
+
+1. Complete typecheck, automated tests, and production build successfully.
+2. Complete every manual QA item above in a preview/test environment using test-only records.
+3. Publish the verified pilot version without sign-in, as requested.
+4. Run the same smoke tests on the published URL before treating the release as verified.
+5. Only after the published version is verified, implement persistent shared database storage and secure admin authentication, then create the two admin accounts.
+6. Re-run the full QA checklist after the database and authentication changes.
+
+**Important data limitation:** the current application stores records in browser-local storage. A published URL does not make those records shared or backed up: each browser/device has its own data. Use only test data in the pilot. Do not rely on this version for the workshop's official live records until shared database persistence, backups, and the two admin accounts are implemented and verified.
