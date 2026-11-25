@@ -47,10 +47,15 @@ export function derivePayrollMovements(weeks:PayrollWeek[],employees:Employee[])
    }
    const dailySalary=Math.max(0,earned-advanceDebt-advanceTotal);
    if(dailySalary>0&&hours>0){
-    for(const day of days){
-     const amount=dailySalary*nonnegative(day.hours)/hours;
+    const workedDays=days.filter(day=>nonnegative(day.hours)>0);
+    let allocated=0;
+    workedDays.forEach((day,index)=>{
+     const amount=index===workedDays.length-1
+      ? Math.round((dailySalary-allocated)*100)/100
+      : Math.round((dailySalary*nonnegative(day.hours)/hours)*100)/100;
+     allocated+=amount;
      if(amount>0)output.push({orderId:week.id+"-"+day.date,reference:week.weekStart,method:"Espèces",direction:"Sortie",amount,kind:"Salaire",counterparty:employee.name,date:day.date});
-    }
+    });
    }
    advanceDebt=Math.max(0,advanceDebt+advanceTotal-earned);
   }
