@@ -1,8 +1,9 @@
-export type PaymentMethod = "Espèces" | "Virement" | "Chèque";
+export type PaymentMethod = "Espèces" | "Virement" | "Chèque" | "Effet";
 export type OrderStatus = "draft" | "delivered" | "cancelled";
 export type AccessoryUse = { accessoryId: string; label: string; quantity: number };
 export type Payment = { id: string; method: PaymentMethod; amount: number; status: "pending" | "confirmed" | "cancelled"; date?: string };
 export type Refund = { id: string; method: PaymentMethod; amount: number; status: "pending" | "confirmed"; date?: string };
+export type CustomerAvoir = { id: string; amount: number; date: string; status: "pending" | "settled" };
 export type WorkshopOrder = {
   id: string;
   number: string;
@@ -12,6 +13,7 @@ export type WorkshopOrder = {
   accessories: AccessoryUse[];
   payments: Payment[];
   refunds: Refund[];
+  avoirs?: CustomerAvoir[];
 };
 export type AccessoryPurchase = { accessoryId: string; label: string; quantity: number };
 export type CashMovement = { orderId: string; reference: string; method: PaymentMethod; direction: "Entrée" | "Sortie"; amount: number; kind: "Paiement" | "Remboursement" | "Achat fournisseur" | "Dépense" | "Avance salaire" | "Salaire" | "Règlement salaire"; counterparty?: string; date?: string };
@@ -31,7 +33,7 @@ const positive = (n: number) => Number.isFinite(n) ? Math.max(0, n) : 0;
  */
 export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurchase[], supplierInvoices: { id: string; supplier: string; invoiceNumber: string; paidAmount: number; paymentMethod: PaymentMethod | "Non réglé"; paidDate?: string; payments?: {id:string;date:string;amount:number;method:PaymentMethod;status?:"pending"|"confirmed"|"cancelled";reference?:string}[] }[] = []): LedgerSnapshot {
   const cashMovements: CashMovement[] = [];
-  const customerMap = new Map<string, { total: number; paid: number }>();
+  const customerMap = new Map<string, { total: number; paid: number; avoir: number }>();
   const stockMap = new Map<string, { label: string; purchased: number; consumed: number }>();
   const warnings: string[] = [];
 
@@ -46,7 +48,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
     if (order.status === "draft") continue;
     const customer = order.customer.trim();
     if (customer) {
-      const row = customerMap.get(customer) ?? { total: 0, paid: 0 };
+      const row = customerMap.get(customer) ?? { total: 0, paid: 0, avoir: 0 };
       if (order.status === "delivered") row.total += positive(order.totalTTC);
       customerMap.set(customer, row);
     }
@@ -57,7 +59,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       stockMap.set(use.accessoryId, row);
     }
     for (const payment of order.payments) {
-      if (payment.status === "pending" || payment.status === "cancelled" || (!payment.status && payment.method === "Chèque")) continue;
+      if (payment.status === "pending" || payment.status === "cancelled" || (!payment.status && (payment.method === "Chèque" || payment.method === "Effet"))) continue;
       const amount = positive(payment.amount);
       if (!amount) continue;
       if (customer) customerMap.get(customer)!.paid += amount;
@@ -89,7 +91,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
     total: values.total,
     paid: values.paid,
     remaining: Math.max(0, values.total - values.paid),
-    credit: Math.max(0, values.paid - values.total),
+    credit: Math.max(values.avoir, Math.max(0, values.paid - values.total)),
   })).sort((a, b) => a.customer.localeCompare(b.customer, "fr"));
 
   const stock = [...stockMap.entries()].map(([accessoryId, values]) => {
