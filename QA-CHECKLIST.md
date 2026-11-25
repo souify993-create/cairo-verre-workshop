@@ -29,6 +29,7 @@ Use a delivered test order of 200 MAD.
 - [ ] Add a partial cash or bank-transfer settlement. Paid balance and cash outflow must increase by exactly the settled amount.
 - [ ] Add a supplier cheque. It must remain pending and must not increase paid balance or cash outflow.
 - [ ] Confirm cheque encashment with the actual date. Paid balance and cash outflow must then include it exactly once.
+- [ ] If a supplier cheque is not encashed, cancel the pending cheque. It must stop reserving the invoice balance, remain marked cancelled, and never create a cash outflow.
 - [ ] Confirm the supplier balance is total TTC minus confirmed settlements, and stock quantities do not change when paying an invoice.
 
 ## 4. Daily journal, cash and payroll separation
