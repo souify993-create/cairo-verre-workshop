@@ -86,3 +86,14 @@ test("employee and payroll week records are retained", () => {
   assert.equal(decoded.payrollWeeks.length, 1);
   assert.equal(decoded.payrollWeeks[0].advances[0].amount, 200);
 });
+
+
+test("supplier invoice storage preserves multiple lines and rejects impossible payment totals",()=>{
+ const invoice={id:"inv-multi",supplier:"Fournisseur B",invoiceNumber:"FB-2",date:"2026-11-25",category:"accessory",lines:[{label:"Poignée",quantity:4,unitPrice:12},{label:"Charnière",quantity:8,unitPrice:3}],totalHT:72,totalTVA:14.4,totalTTC:86.4,paidAmount:20,paymentMethod:"Espèces",paidDate:"2026-11-25"};
+ const decoded=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[invoice]}));
+ assert.equal(decoded.supplierInvoices.length,1);assert.equal(decoded.supplierInvoices[0].lines.length,2);
+ const invalid=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[{...invoice,paidAmount:100}]}));
+ assert.equal(invalid.supplierInvoices.length,0);
+ const unpaid=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[{...invoice,paidAmount:10,paymentMethod:"Non réglé"}]}));
+ assert.equal(unpaid.supplierInvoices.length,0);
+});
