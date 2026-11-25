@@ -18,7 +18,7 @@ export function JournalierPanel({movements,expenses,employees,payrollWeeks}:{mov
  const incoming=dated.filter(m=>m.direction==="Entrée").reduce((s,m)=>s+m.amount,0);
  const outgoing=dated.filter(m=>m.direction==="Sortie").reduce((s,m)=>s+m.amount,0);
  return <div className="content">
-  <div className="intro"><div><h2>Journalier · Entrée / Sortie</h2><p>Les charges et salaires sont répartis par jour ; les avances sont déduites du salaire pour éviter tout double comptage.</p></div><label className="field"><span>Date du journal</span><input className="text-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label></div>
+  <div className="intro"><div><h2>Journalier · Entrée / Sortie</h2><p>Les charges et salaires sont répartis par jour ; les avances sont déduites du salaire pour éviter tout double comptage.</p></div><div className="intro-actions print-hide"><label className="field"><span>Date du journal</span><input className="text-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="add-btn" onClick={()=>window.print()}>Imprimer le journal</button></div></div>
   <section className="panel">
    <div className="summary-line"><span>Total Entrée</span><strong>{money(incoming)}</strong></div>
    <div className="summary-line"><span>Total Sortie</span><strong>{money(outgoing)}</strong></div>
