@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addPayment, addRefund, cancelOrder, confirmPayment, markOrderDelivered, orderFromDraft, reviseOrder } from "./workshop";
+import { addPayment, addRefund, cancelOrder, confirmPayment, confirmRefund, markOrderDelivered, orderFromDraft, reviseOrder } from "./workshop";
 import { deriveLedger } from "./ledger";
 import type { Draft } from "./storage";
 
@@ -77,4 +77,19 @@ test("actual refunds cannot exceed money collected for that order", () => {
   const snapshot = deriveLedger([order], []);
   assert.equal(snapshot.cashMovements.filter(m => m.direction === "Sortie")[0].amount, 60);
   assert.equal(snapshot.customers[0].paid, 40);
+});
+
+test("a cheque refund stays pending until encashment and cannot exceed confirmed receipts", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cash-refund", method: "Espèces", amount: 100, status: "confirmed" });
+  order = addRefund(order, { id: "cheque-refund", method: "Chèque", amount: 80, status: "pending" });
+  assert.equal(deriveLedger([order], []).cashMovements.filter(m => m.direction === "Sortie").length, 0);
+  assert.throws(() => confirmRefund(order, "cheque-refund", "2026-11-25T12:00:00.000Z"));
+  order = addRefund(order, { id: "cash-refund-2", method: "Espèces", amount: 30, status: "confirmed" });
+  assert.throws(() => confirmRefund(order, "cheque-refund", "2026-11-25T12:00:00.000Z"));
+  order = addRefund(order, { id: "cash-refund-3", method: "Espèces", amount: 10, status: "confirmed" });
+  order = confirmRefund(order, "cheque-refund", "2026-11-26T12:00:00.000Z");
+  const outflows = deriveLedger([order], []).cashMovements.filter(m => m.direction === "Sortie");
+  assert.equal(outflows.length, 3);
+  assert.equal(outflows.find(m => m.orderId === "cheque-refund")?.date, "2026-11-26");
 });
