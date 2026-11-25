@@ -1,0 +1,40 @@
+"use client";
+import { useMemo,useState } from "react";
+import type { SupplierInvoice } from "@/lib/workshop-storage";
+const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
+export function PurchasesPanel({invoices,onAdd}:{invoices:SupplierInvoice[];onAdd:(invoice:SupplierInvoice)=>void}){
+ const [supplier,setSupplier]=useState("");const [invoiceNumber,setInvoiceNumber]=useState("");const [date,setDate]=useState(new Date().toISOString().slice(0,10));
+ const [category,setCategory]=useState<"glass"|"accessory">("glass");const [label,setLabel]=useState("");const [quantity,setQuantity]=useState(1);const [unitPrice,setUnitPrice]=useState(0);const [widthMm,setWidthMm]=useState(0);const [heightMm,setHeightMm]=useState(0);
+ const [totalHT,setTotalHT]=useState(0);const [totalTVA,setTotalTVA]=useState(0);const [totalTTC,setTotalTTC]=useState(0);const [paidAmount,setPaidAmount]=useState(0);const [method,setMethod]=useState<"Espèces"|"Virement"|"Chèque"|"Non réglé">("Non réglé");const [chequeNumber,setChequeNumber]=useState("");const [chequeDate,setChequeDate]=useState("");
+ const suppliers=useMemo(()=>{const map=new Map<string,{total:number;paid:number}>();for(const x of invoices){const v=map.get(x.supplier)||{total:0,paid:0};v.total+=x.totalTTC;v.paid+=x.paidAmount;map.set(x.supplier,v);}return [...map.entries()].map(([name,v])=>({name,...v,remaining:Math.max(0,v.total-v.paid)})).sort((a,b)=>a.name.localeCompare(b.name,"fr"));},[invoices]);
+ const submit=()=>{if(!supplier.trim()||!invoiceNumber.trim()||!label.trim()||quantity<=0||totalTTC<0||paidAmount<0||paidAmount>totalTTC)return;const invoice:SupplierInvoice={id:crypto.randomUUID(),supplier:supplier.trim(),invoiceNumber:invoiceNumber.trim(),date,category,lines:[{label:label.trim(),quantity,unitPrice,...(category==="glass"?{widthMm,heightMm}:{})}],totalHT,totalTVA,totalTTC,paidAmount,paymentMethod:method,...(method==="Chèque"?{chequeNumber,chequeDate}:{})};onAdd(invoice);setInvoiceNumber("");setLabel("");setQuantity(1);setUnitPrice(0);setTotalHT(0);setTotalTVA(0);setTotalTTC(0);setPaidAmount(0);setMethod("Non réglé");};
+ return <div className="content">
+  <div className="intro"><div><h2>Achats & fournisseurs</h2><p>Les montants HT, TVA et TTC sont repris exactement de la facture fournisseur.</p></div><span className="draft-count">{invoices.length} facture(s)</span></div>
+  <section className="panel"><div className="panel-heading"><div><h3>Enregistrer une facture fournisseur</h3><p>Le vitrage reste une facture d'achat. Seuls les accessoires alimentent le stock.</p></div></div>
+   <div className="form-grid" style={{gridTemplateColumns:"repeat(2,minmax(0,1fr))"}}>
+    <label className="field"><span>Fournisseur</span><input className="text-input" value={supplier} onChange={e=>setSupplier(e.target.value)} placeholder="Nom du fournisseur"/></label>
+    <label className="field"><span>N° facture</span><input className="text-input" value={invoiceNumber} onChange={e=>setInvoiceNumber(e.target.value)}/></label>
+    <label className="field"><span>Date facture</span><input className="text-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
+    <label className="field"><span>Type d'achat</span><select className="text-input" value={category} onChange={e=>setCategory(e.target.value as "glass"|"accessory")}><option value="glass">Vitrage (facture uniquement)</option><option value="accessory">Accessoires (entrée en stock)</option></select></label>
+    <label className="field"><span>Désignation</span><input className="text-input" value={label} onChange={e=>setLabel(e.target.value)} placeholder={category==="glass"?"Type de verre":"Nom de l'accessoire"}/></label>
+    <label className="field"><span>Quantité</span><input className="text-input" type="number" min="0" step="any" value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label>
+    {category==="glass"&&<><label className="field"><span>Largeur (mm)</span><input className="text-input" type="number" min="0" value={widthMm} onChange={e=>setWidthMm(Number(e.target.value))}/></label><label className="field"><span>Hauteur (mm)</span><input className="text-input" type="number" min="0" value={heightMm} onChange={e=>setHeightMm(Number(e.target.value))}/></label></>}
+    <label className="field"><span>Prix unitaire facture</span><input className="text-input" type="number" min="0" value={unitPrice} onChange={e=>setUnitPrice(Number(e.target.value))}/></label>
+    <label className="field"><span>Total HT (facture)</span><input className="text-input" type="number" min="0" value={totalHT} onChange={e=>setTotalHT(Number(e.target.value))}/></label>
+    <label className="field"><span>TVA (facture)</span><input className="text-input" type="number" min="0" value={totalTVA} onChange={e=>setTotalTVA(Number(e.target.value))}/></label>
+    <label className="field"><span>Total TTC (facture)</span><input className="text-input" type="number" min="0" value={totalTTC} onChange={e=>setTotalTTC(Number(e.target.value))}/></label>
+    <label className="field"><span>Montant réellement payé</span><input className="text-input" type="number" min="0" max={totalTTC} value={paidAmount} onChange={e=>setPaidAmount(Number(e.target.value))}/></label>
+    <label className="field"><span>Mode de paiement</span><select className="text-input" value={method} onChange={e=>setMethod(e.target.value as typeof method)}><option>Non réglé</option><option>Espèces</option><option>Virement</option><option>Chèque</option></select></label>
+    {method==="Chèque"&&<><label className="field"><span>Numéro du chèque</span><input className="text-input" value={chequeNumber} onChange={e=>setChequeNumber(e.target.value)}/></label><label className="field"><span>Date du chèque</span><input className="text-input" type="date" value={chequeDate} onChange={e=>setChequeDate(e.target.value)}/></label></>}
+   </div>
+   {method==="Chèque"&&<p className="local-note">Saisissez uniquement le montant déjà encaissé par le fournisseur dans « Montant réellement payé ». Un chèque remis mais non débité ne réduit pas le reste dû.</p>}
+   <button className="add-btn" style={{marginTop:16}} disabled={!supplier.trim()||!invoiceNumber.trim()||!label.trim()||quantity<=0||paidAmount>totalTTC} onClick={submit}>Enregistrer la facture</button>
+  </section>
+  <section className="panel"><div className="panel-heading"><div><h3>Fournisseurs</h3><p>Soldes calculés depuis les factures enregistrées.</p></div></div>
+   {suppliers.length?<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}><thead><tr>{["Fournisseur","Total","Payé","Reste"].map(x=><th key={x} style={{textAlign:x==="Fournisseur"?"left":"right",padding:10}}>{x}</th>)}</tr></thead><tbody>{suppliers.map(x=><tr key={x.name} style={{borderTop:"1px solid #e7ecee"}}><td style={{padding:10}}>{x.name}</td><td style={{padding:10,textAlign:"right"}}>{money(x.total)}</td><td style={{padding:10,textAlign:"right"}}>{money(x.paid)}</td><td style={{padding:10,textAlign:"right"}}>{money(x.remaining)}</td></tr>)}</tbody></table></div>:<div className="empty-inline">Aucun fournisseur enregistré.</div>}
+  </section>
+  <section className="panel"><div className="panel-heading"><div><h3>Historique des factures</h3><p>Les totaux affichés sont ceux saisis depuis la facture originale.</p></div></div>
+   {invoices.length?[...invoices].sort((a,b)=>b.date.localeCompare(a.date)).map(x=><div className="saved-draft" key={x.id}><div><strong>{x.supplier} · {x.invoiceNumber}</strong><span>{x.date} · {x.category==="glass"?"Vitrage":"Accessoires"} · {x.lines.map(l=>l.label).join(", ")}</span></div><div><strong>{money(x.totalTTC)}</strong><span>Payé {money(x.paidAmount)} · Reste {money(Math.max(0,x.totalTTC-x.paidAmount))}</span></div></div>):<div className="empty-inline">Aucune facture fournisseur.</div>}
+  </section>
+ </div>;
+}
