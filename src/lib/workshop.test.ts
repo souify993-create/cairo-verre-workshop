@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addPayment, addRefund, cancelOrder, confirmPayment, confirmRefund, markOrderDelivered, orderFromDraft, reviseOrder } from "./workshop";
+import { addPayment, addRefund, cancelOrder, confirmPayment, confirmRefund, markOrderDelivered, orderFromDraft, reviseOrder, reviseDeliveredOrder } from "./workshop";
 import { deriveLedger } from "./ledger";
 import type { Draft } from "./storage";
 
