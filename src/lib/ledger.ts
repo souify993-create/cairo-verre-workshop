@@ -57,7 +57,7 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       stockMap.set(use.accessoryId, row);
     }
     for (const payment of order.payments) {
-      if (payment.status !== "confirmed") continue;
+      if (payment.status === "pending" || (!payment.status && payment.method === "Chèque")) continue;
       const amount = positive(payment.amount);
       if (!amount) continue;
       if (customer) customerMap.get(customer)!.paid += amount;
