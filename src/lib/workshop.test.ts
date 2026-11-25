@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addPayment, cancelOrder, confirmPayment, markOrderDelivered, orderFromDraft, reviseOrder } from "./workshop";
+import { addPayment, addRefund, cancelOrder, confirmPayment, markOrderDelivered, orderFromDraft, reviseOrder } from "./workshop";
 import { deriveLedger } from "./ledger";
 import type { Draft } from "./storage";
 
@@ -67,4 +67,14 @@ test("changing order lines requires a matching total and updates accessory consu
   });
   assert.equal(revised.accessories[0].accessoryId, "charniere");
   assert.equal(revised.accessories[0].quantity, 3);
+});
+
+test("actual refunds cannot exceed money collected for that order", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cash1", method: "Espèces", amount: 100, status: "confirmed" });
+  order = addRefund(order, { id: "refund1", method: "Espèces", amount: 60, status: "confirmed" });
+  assert.throws(() => addRefund(order, { id: "refund2", method: "Espèces", amount: 50, status: "confirmed" }));
+  const snapshot = deriveLedger([order], []);
+  assert.equal(snapshot.cashMovements.filter(m => m.direction === "Sortie")[0].amount, 60);
+  assert.equal(snapshot.customers[0].paid, 40);
 });
