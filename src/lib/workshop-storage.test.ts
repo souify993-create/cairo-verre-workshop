@@ -21,9 +21,9 @@ test("workshop store reads valid orders and accessory purchases", () => {
 });
 
 test("workshop store rejects unsupported versions and malformed JSON", () => {
-  assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [] });
+  assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [] });
   assert.deepEqual(decodeWorkshopStore(JSON.stringify({ version: 2, orders: [delivered], accessoryPurchases: [] })),
-    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [] });
+    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [] });
 });
 
 test("workshop store filters malformed order records", () => {
@@ -50,6 +50,8 @@ test("older local stores remain readable without supplier invoice data", () => {
   const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [] }));
   assert.deepEqual(decoded.supplierInvoices, []);
   assert.deepEqual(decoded.expenses, []);
+  assert.deepEqual(decoded.employees, []);
+  assert.deepEqual(decoded.payrollWeeks, []);
 });
 
 
