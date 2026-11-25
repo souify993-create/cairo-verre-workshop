@@ -12,12 +12,15 @@ const accessoryKey = (label: string) =>
   label.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "accessoire-sans-nom";
 
-export function orderFromDraft(draft: Draft, now = new Date().toISOString()): StoredOrder {
-  const accessories: AccessoryUse[] = draft.accessories.map((line) => ({
+const accessoryUsesFromLines = (lines: Draft["accessories"]): AccessoryUse[] =>
+  lines.map((line) => ({
     accessoryId: accessoryKey(line.label),
     label: line.label.trim() || "Accessoire",
     quantity: line.quantity,
   }));
+
+export function orderFromDraft(draft: Draft, now = new Date().toISOString()): StoredOrder {
+  const accessories = accessoryUsesFromLines(draft.accessories);
   return {
     id: draft.id,
     number: draft.number,
@@ -55,8 +58,13 @@ export function reviseOrder(
   const totalTTC = changes.totalTTC === undefined ? order.totalTTC : changes.totalTTC;
   if (!Number.isFinite(totalTTC) || totalTTC < 0) throw new Error("Le total doit être positif ou nul.");
   if (order.status === "delivered" && !customer) throw new Error("Le nom du client est obligatoire.");
+  if (changes.lines && changes.totalTTC === undefined) {
+    throw new Error("Le total TTC doit être recalculé lors de la modification des lignes.");
+  }
   const lines = changes.lines ?? order.lines;
-  const accessories = changes.accessories ?? order.accessories;
+  const accessories = changes.accessories ?? (changes.lines
+    ? accessoryUsesFromLines(changes.lines.accessories)
+    : order.accessories);
   return { ...order, customer, totalTTC, lines, accessories, updatedAt: now };
 }
 
