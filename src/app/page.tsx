@@ -56,7 +56,8 @@ export default function Home(){
  const glassGroups=useMemo(()=>{const map=new Map<string,GlassLine[]>();glass.forEach(line=>{const key=glassGroupKey(line);map.set(key,[...(map.get(key)||[]),line]);});return [...map.entries()].map(([id,lines])=>({id,lines}));},[glass]);
  const measuredServices=useMemo(()=>services.map(s=>{const lines=s.groupId?glass.filter(line=>line.groupId===s.groupId):[];const quantity=s.groupId?serviceQuantityForGlassLines(s.name,lines):serviceQuantity(s.name,serviceWidth,serviceHeight,servicePieces);return {...s,unit:serviceUnit(s.name),widthMm:lines[0]?.widthMm??serviceWidth,heightMm:lines[0]?.heightMm??serviceHeight,pieces:lines.reduce((sum,line)=>sum+line.quantity,0)||servicePieces,quantity};}),[services,glass,serviceWidth,serviceHeight,servicePieces]);
  const [drafts,setDrafts]=useState<Draft[]>([]),[saved,setSaved]=useState(false),[editingId,setEditingId]=useState<string|null>(null);
- const [orderFilter,setOrderFilter]=useState<"all"|"draft"|"cancelled"|"delivered">("draft"),[orderPage,setOrderPage]=useState(1),[orderSearch,setOrderSearch]=useState("");\n const [cashPage,setCashPage]=useState(1);
+ const [orderFilter,setOrderFilter]=useState<"all"|"draft"|"cancelled"|"delivered">("draft"),[orderPage,setOrderPage]=useState(1),[orderSearch,setOrderSearch]=useState("");
+ const [cashPage,setCashPage]=useState(1);
  const [editingDeliveredId,setEditingDeliveredId]=useState<string|null>(null);
  const [deliveryDraftId,setDeliveryDraftId]=useState<string|null>(null);
  const [initialPaidAmount,setInitialPaidAmount]=useState("");
