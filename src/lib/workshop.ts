@@ -99,7 +99,7 @@ export function confirmPayment(order: StoredOrder, paymentId: string, now = new 
     return { ...payment, status: "confirmed" as const };
   });
   if (!found) throw new Error("Paiement introuvable.");
-  return { ...order, payments, updatedAt: now };
+  return { ...order, payments: payments.map(payment => payment.id === paymentId ? { ...payment, date: now.slice(0, 10) } : payment), updatedAt: now };
 }
 
 export function addRefund(order: StoredOrder, refund: Refund, now = new Date().toISOString()): StoredOrder {
@@ -112,5 +112,5 @@ export function addRefund(order: StoredOrder, refund: Refund, now = new Date().t
       throw new Error("Le remboursement dépasse le montant réellement encaissé pour cette commande.");
     }
   }
-  return { ...order, refunds: [...order.refunds, { ...refund }], updatedAt: now };
+  return { ...order, refunds: [...order.refunds, { ...refund, date: refund.date ?? now.slice(0, 10) }], updatedAt: now };
 }
