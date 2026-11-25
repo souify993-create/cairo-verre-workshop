@@ -85,6 +85,7 @@ export function addPayment(
   // Cash and bank transfers represent money already received when registered here.
   const recorded: Payment = {
     ...payment,
+    date: payment.date ?? now.slice(0, 10),
     status: payment.method === "Chèque" ? "pending" : "confirmed",
   };
   return { ...order, payments: [...order.payments, recorded], updatedAt: now };
