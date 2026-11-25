@@ -1,40 +1,73 @@
 "use client";
-import { useMemo,useState } from "react";
-import type { SupplierInvoice } from "@/lib/workshop-storage";
-const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);\nconst today=()=>{const now=new Date();return [now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");};
+import { useMemo, useState } from "react";
+import type { PurchaseLine, SupplierInvoice } from "@/lib/workshop-storage";
+
+const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
+const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
+const blankLine=():PurchaseLine=>({label:"",quantity:1,unitPrice:0});
+
 export function PurchasesPanel({invoices,onAdd}:{invoices:SupplierInvoice[];onAdd:(invoice:SupplierInvoice)=>void}){
- const [supplier,setSupplier]=useState("");const [invoiceNumber,setInvoiceNumber]=useState("");const [date,setDate]=useState(new Date().toISOString().slice(0,10));
- const [category,setCategory]=useState<"glass"|"accessory">("glass");const [label,setLabel]=useState("");const [quantity,setQuantity]=useState(1);const [unitPrice,setUnitPrice]=useState(0);const [widthMm,setWidthMm]=useState(0);const [heightMm,setHeightMm]=useState(0);
- const [totalHT,setTotalHT]=useState(0);const [totalTVA,setTotalTVA]=useState(0);const [totalTTC,setTotalTTC]=useState(0);const [paidAmount,setPaidAmount]=useState(0);const [method,setMethod]=useState<"Espèces"|"Virement"|"Chèque"|"Non réglé">("Non réglé");const [chequeNumber,setChequeNumber]=useState("");const [chequeDate,setChequeDate]=useState("");const [paidDate,setPaidDate]=useState(today());
- const suppliers=useMemo(()=>{const map=new Map<string,{total:number;paid:number}>();for(const x of invoices){const v=map.get(x.supplier)||{total:0,paid:0};v.total+=x.totalTTC;v.paid+=x.paidAmount;map.set(x.supplier,v);}return [...map.entries()].map(([name,v])=>({name,...v,remaining:Math.max(0,v.total-v.paid)})).sort((a,b)=>a.name.localeCompare(b.name,"fr"));},[invoices]);
- const submit=()=>{if(!supplier.trim()||!invoiceNumber.trim()||!label.trim()||quantity<=0||totalTTC<0||paidAmount<0||paidAmount>totalTTC)return;const invoice:SupplierInvoice={id:crypto.randomUUID(),supplier:supplier.trim(),invoiceNumber:invoiceNumber.trim(),date,category,lines:[{label:label.trim(),quantity,unitPrice,...(category==="glass"?{widthMm,heightMm}:{})}],totalHT,totalTVA,totalTTC,paidAmount,paymentMethod:method,...(paidAmount>0?{paidDate}:{}),...(method==="Chèque"?{chequeNumber,chequeDate}:{})};onAdd(invoice);setInvoiceNumber("");setLabel("");setQuantity(1);setUnitPrice(0);setTotalHT(0);setTotalTVA(0);setTotalTTC(0);setPaidAmount(0);setMethod("Non réglé");};
+ const [supplier,setSupplier]=useState("");
+ const [invoiceNumber,setInvoiceNumber]=useState("");
+ const [date,setDate]=useState(today());
+ const [category,setCategory]=useState<"glass"|"accessory">("glass");
+ const [lines,setLines]=useState<PurchaseLine[]>([blankLine()]);
+ const [totalHT,setTotalHT]=useState(0),[totalTVA,setTotalTVA]=useState(0),[totalTTC,setTotalTTC]=useState(0),[paidAmount,setPaidAmount]=useState(0);
+ const [method,setMethod]=useState<"Espèces"|"Virement"|"Chèque"|"Non réglé">("Non réglé");
+ const [chequeNumber,setChequeNumber]=useState(""),[chequeDate,setChequeDate]=useState(""),[paidDate,setPaidDate]=useState(today());
+ const [search,setSearch]=useState(""),[page,setPage]=useState(0),[selectedSupplier,setSelectedSupplier]=useState<string|null>(null);
+
+ const updateLine=(index:number,patch:Partial<PurchaseLine>)=>setLines(current=>current.map((line,i)=>i===index?{...line,...patch}:line));
+ const suppliers=useMemo(()=>{const map=new Map<string,{total:number;paid:number;count:number;lastDate:string}>();for(const inv of invoices){const old=map.get(inv.supplier)||{total:0,paid:0,count:0,lastDate:inv.date};map.set(inv.supplier,{total:old.total+inv.totalTTC,paid:old.paid+inv.paidAmount,count:old.count+1,lastDate:inv.date>old.lastDate?inv.date:old.lastDate});}return [...map.entries()].map(([name,v])=>({name,...v,remaining:Math.max(0,v.total-v.paid)})).sort((a,b)=>a.name.localeCompare(b.name,"fr"));},[invoices]);
+ const filtered=suppliers.filter(s=>s.name.toLocaleLowerCase("fr").includes(search.trim().toLocaleLowerCase("fr")));
+ const pageSize=10,pageCount=Math.max(1,Math.ceil(filtered.length/pageSize)),visible=filtered.slice(page*pageSize,(page+1)*pageSize);
+ const supplierInvoices=selectedSupplier?invoices.filter(x=>x.supplier===selectedSupplier).sort((a,b)=>b.date.localeCompare(a.date)):[];
+
+ const validLines=lines.length>0&&lines.every(l=>l.label.trim()&&Number.isFinite(l.quantity)&&l.quantity>0&&Number.isFinite(l.unitPrice)&&l.unitPrice>=0&&(category!=="glass"||(Number(l.widthMm)>0&&Number(l.heightMm)>0)));
+ const submit=()=>{
+  if(!supplier.trim()||!invoiceNumber.trim()||!validLines||totalHT<0||totalTVA<0||totalTTC<0||paidAmount<0||paidAmount>totalTTC)return;
+  const invoice:SupplierInvoice={id:crypto.randomUUID(),supplier:supplier.trim(),invoiceNumber:invoiceNumber.trim(),date,category,lines:lines.map(l=>({...l,...(category==="glass"?{}:{widthMm:undefined,heightMm:undefined})})),totalHT,totalTVA,totalTTC,paidAmount,paymentMethod:method,...(paidAmount>0?{paidDate}:{}),...(method==="Chèque"?{chequeNumber,chequeDate}:{})};
+  onAdd(invoice);setInvoiceNumber("");setLines([blankLine()]);setTotalHT(0);setTotalTVA(0);setTotalTTC(0);setPaidAmount(0);setMethod("Non réglé");setChequeNumber("");setChequeDate("");
+ };
  return <div className="content">
   <div className="intro"><div><h2>Achats & fournisseurs</h2><p>Les montants HT, TVA et TTC sont repris exactement de la facture fournisseur.</p></div><span className="draft-count">{invoices.length} facture(s)</span></div>
-  <section className="panel"><div className="panel-heading"><div><h3>Enregistrer une facture fournisseur</h3><p>Le vitrage reste une facture d'achat. Seuls les accessoires alimentent le stock.</p></div></div>
+  <section className="panel"><div className="panel-heading"><div><h3>Enregistrer une facture fournisseur</h3><p>Ajoutez toutes les lignes de la facture. Les totaux restent saisis manuellement.</p></div></div>
    <div className="form-grid" style={{gridTemplateColumns:"repeat(2,minmax(0,1fr))"}}>
     <label className="field"><span>Fournisseur</span><input className="text-input" value={supplier} onChange={e=>setSupplier(e.target.value)} placeholder="Nom du fournisseur"/></label>
     <label className="field"><span>N° facture</span><input className="text-input" value={invoiceNumber} onChange={e=>setInvoiceNumber(e.target.value)}/></label>
     <label className="field"><span>Date facture</span><input className="text-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label>
-    <label className="field"><span>Type d'achat</span><select className="text-input" value={category} onChange={e=>setCategory(e.target.value as "glass"|"accessory")}><option value="glass">Vitrage (facture uniquement)</option><option value="accessory">Accessoires (entrée en stock)</option></select></label>
-    <label className="field"><span>Désignation</span><input className="text-input" value={label} onChange={e=>setLabel(e.target.value)} placeholder={category==="glass"?"Type de verre":"Nom de l'accessoire"}/></label>
-    <label className="field"><span>Quantité</span><input className="text-input" type="number" min="0" step="any" value={quantity} onChange={e=>setQuantity(Number(e.target.value))}/></label>
-    {category==="glass"&&<><label className="field"><span>Largeur (mm)</span><input className="text-input" type="number" min="0" value={widthMm} onChange={e=>setWidthMm(Number(e.target.value))}/></label><label className="field"><span>Hauteur (mm)</span><input className="text-input" type="number" min="0" value={heightMm} onChange={e=>setHeightMm(Number(e.target.value))}/></label></>}
-    <label className="field"><span>Prix unitaire facture</span><input className="text-input" type="number" min="0" value={unitPrice} onChange={e=>setUnitPrice(Number(e.target.value))}/></label>
+    <label className="field"><span>Type d'achat</span><select className="text-input" value={category} onChange={e=>{setCategory(e.target.value as "glass"|"accessory");setLines([blankLine()]);}}><option value="glass">Vitrage (facture uniquement)</option><option value="accessory">Accessoires (entrée en stock)</option></select></label>
+   </div>
+   <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",margin:"20px 0 10px"}}><strong>Lignes de facture ({lines.length})</strong><button className="add-btn" type="button" onClick={()=>setLines(v=>[...v,blankLine()])}>+ Ajouter une ligne</button></div>
+   {lines.map((line,i)=><div key={i} className="panel" style={{padding:12,marginBottom:10,border:"1px solid #e7ecee"}}>
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><strong>Ligne {i+1}</strong><button className="icon-btn danger" type="button" disabled={lines.length===1} onClick={()=>setLines(v=>v.filter((_,n)=>n!==i))} aria-label={"Supprimer la ligne "+(i+1)}>×</button></div>
+    <div className="form-grid" style={{gridTemplateColumns:"repeat(2,minmax(0,1fr))"}}>
+     <label className="field"><span>Désignation</span><input className="text-input" value={line.label} onChange={e=>updateLine(i,{label:e.target.value})} placeholder={category==="glass"?"Type de verre":"Nom de l'accessoire"}/></label>
+     <label className="field"><span>Quantité</span><input className="text-input" type="number" min="0" step="any" value={line.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})}/></label>
+     {category==="glass"&&<><label className="field"><span>Largeur (mm)</span><input className="text-input" type="number" min="0" value={line.widthMm??0} onChange={e=>updateLine(i,{widthMm:Number(e.target.value)})}/></label><label className="field"><span>Hauteur (mm)</span><input className="text-input" type="number" min="0" value={line.heightMm??0} onChange={e=>updateLine(i,{heightMm:Number(e.target.value)})}/></label></>}
+     <label className="field"><span>Prix unitaire facture</span><input className="text-input" type="number" min="0" step="any" value={line.unitPrice} onChange={e=>updateLine(i,{unitPrice:Number(e.target.value)})}/></label>
+    </div>
+   </div>)}
+   <div className="form-grid" style={{gridTemplateColumns:"repeat(2,minmax(0,1fr))"}}>
     <label className="field"><span>Total HT (facture)</span><input className="text-input" type="number" min="0" value={totalHT} onChange={e=>setTotalHT(Number(e.target.value))}/></label>
     <label className="field"><span>TVA (facture)</span><input className="text-input" type="number" min="0" value={totalTVA} onChange={e=>setTotalTVA(Number(e.target.value))}/></label>
     <label className="field"><span>Total TTC (facture)</span><input className="text-input" type="number" min="0" value={totalTTC} onChange={e=>setTotalTTC(Number(e.target.value))}/></label>
     <label className="field"><span>Montant réellement payé</span><input className="text-input" type="number" min="0" max={totalTTC} value={paidAmount} onChange={e=>setPaidAmount(Number(e.target.value))}/></label>
     <label className="field"><span>Mode de paiement</span><select className="text-input" value={method} onChange={e=>setMethod(e.target.value as typeof method)}><option>Non réglé</option><option>Espèces</option><option>Virement</option><option>Chèque</option></select></label>
-    {paidAmount>0&&<label className="field"><span>Date du paiement effectif</span><input className="text-input" type="date" value={paidDate} onChange={e=>setPaidDate(e.target.value)}/></label>}{method==="Chèque"&&<><label className="field"><span>Numéro du chèque</span><input className="text-input" value={chequeNumber} onChange={e=>setChequeNumber(e.target.value)}/></label><label className="field"><span>Date du chèque</span><input className="text-input" type="date" value={chequeDate} onChange={e=>setChequeDate(e.target.value)}/></label></>}
+    {paidAmount>0&&<label className="field"><span>Date du paiement effectif</span><input className="text-input" type="date" value={paidDate} onChange={e=>setPaidDate(e.target.value)}/></label>}
+    {method==="Chèque"&&<><label className="field"><span>Numéro du chèque</span><input className="text-input" value={chequeNumber} onChange={e=>setChequeNumber(e.target.value)}/></label><label className="field"><span>Date du chèque</span><input className="text-input" type="date" value={chequeDate} onChange={e=>setChequeDate(e.target.value)}/></label></>}
    </div>
-   {method==="Chèque"&&<p className="local-note">Saisissez uniquement le montant déjà encaissé par le fournisseur dans « Montant réellement payé ». Un chèque remis mais non débité ne réduit pas le reste dû.</p>}
-   <button className="add-btn" style={{marginTop:16}} disabled={!supplier.trim()||!invoiceNumber.trim()||!label.trim()||quantity<=0||paidAmount>totalTTC} onClick={submit}>Enregistrer la facture</button>
+   {method==="Chèque"&&<p className="local-note">Saisissez uniquement le montant déjà encaissé par le fournisseur. Un chèque remis mais non débité ne réduit pas le reste dû.</p>}
+   <button className="add-btn" style={{marginTop:16}} disabled={!supplier.trim()||!invoiceNumber.trim()||!validLines||paidAmount>totalTTC||paidAmount<0||totalHT<0||totalTVA<0||totalTTC<0} onClick={submit}>Enregistrer la facture</button>
   </section>
-  <section className="panel"><div className="panel-heading"><div><h3>Fournisseurs</h3><p>Soldes calculés depuis les factures enregistrées.</p></div></div>
-   {suppliers.length?<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}><thead><tr>{["Fournisseur","Total","Payé","Reste"].map(x=><th key={x} style={{textAlign:x==="Fournisseur"?"left":"right",padding:10}}>{x}</th>)}</tr></thead><tbody>{suppliers.map(x=><tr key={x.name} style={{borderTop:"1px solid #e7ecee"}}><td style={{padding:10}}>{x.name}</td><td style={{padding:10,textAlign:"right"}}>{money(x.total)}</td><td style={{padding:10,textAlign:"right"}}>{money(x.paid)}</td><td style={{padding:10,textAlign:"right"}}>{money(x.remaining)}</td></tr>)}</tbody></table></div>:<div className="empty-inline">Aucun fournisseur enregistré.</div>}
+  <section className="panel"><div className="panel-heading"><div><h3>Fournisseurs</h3><p>Date de dernière facture · N° achat · Total · Payé · Reste. 10 fournisseurs par page.</p></div></div>
+   <input className="text-input" style={{width:"100%",maxWidth:420,marginBottom:14}} value={search} onChange={e=>{setSearch(e.target.value);setPage(0);}} placeholder="Rechercher un fournisseur..."/>
+   {visible.length?<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}><thead><tr>{["Fournisseur","Date","N° Achat","Total","Payé","Reste",""].map(x=><th key={x} style={{textAlign:["Fournisseur","Date","N° Achat"].includes(x)?"left":"right",padding:9}}>{x}</th>)}</tr></thead><tbody>{visible.map(s=>{const latest=invoices.filter(x=>x.supplier===s.name).sort((a,b)=>b.date.localeCompare(a.date))[0];return <tr key={s.name} style={{borderTop:"1px solid #e7ecee"}}><td style={{padding:9,fontWeight:650}}>{s.name}</td><td style={{padding:9}}>{latest?.date}</td><td style={{padding:9}}>{latest?.invoiceNumber}</td><td style={{padding:9,textAlign:"right"}}>{money(s.total)}</td><td style={{padding:9,textAlign:"right"}}>{money(s.paid)}</td><td style={{padding:9,textAlign:"right"}}>{money(s.remaining)}</td><td style={{padding:9}}><button className="add-btn" onClick={()=>setSelectedSupplier(selectedSupplier===s.name?null:s.name)}>{selectedSupplier===s.name?"Fermer":"Compte"}</button></td></tr>;})}</tbody></table></div>:<div className="empty-inline">Aucun fournisseur ne correspond à la recherche.</div>}
+   <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:14}}><span className="local-note">Page {page+1} / {pageCount}</span><div style={{display:"flex",gap:8}}><button className="add-btn" disabled={page===0} onClick={()=>setPage(v=>Math.max(0,v-1))}>Précédent</button><button className="add-btn" disabled={page+1>=pageCount} onClick={()=>setPage(v=>Math.min(pageCount-1,v+1))}>Suivant</button></div></div>
+   {selectedSupplier&&<div style={{marginTop:18,paddingTop:16,borderTop:"1px solid #e7ecee"}}><h3>Compte fournisseur · {selectedSupplier}</h3><p className="local-note">Historique des factures et paiements effectivement enregistrés.</p>{supplierInvoices.map(x=><div className="saved-draft" key={x.id}><div><strong>{x.date} · {x.invoiceNumber}</strong><span>{x.lines.map(l=>l.label+" × "+l.quantity).join(" · ")} · {x.paymentMethod}{x.chequeNumber?" · Chèque "+x.chequeNumber:""}</span></div><div><strong>{money(x.totalTTC)}</strong><span>Payé {money(x.paidAmount)} · Reste {money(Math.max(0,x.totalTTC-x.paidAmount))}</span></div></div>)}<div className="summary-line"><span>Total facturé</span><strong>{money(supplierInvoices.reduce((n,x)=>n+x.totalTTC,0))}</strong></div><div className="summary-line"><span>Total payé</span><strong>{money(supplierInvoices.reduce((n,x)=>n+x.paidAmount,0))}</strong></div><div className="summary-line"><span>Solde restant</span><strong>{money(supplierInvoices.reduce((n,x)=>n+Math.max(0,x.totalTTC-x.paidAmount),0))}</strong></div></div>}
   </section>
-  <section className="panel"><div className="panel-heading"><div><h3>Historique des factures</h3><p>Les totaux affichés sont ceux saisis depuis la facture originale.</p></div></div>
-   {invoices.length?[...invoices].sort((a,b)=>b.date.localeCompare(a.date)).map(x=><div className="saved-draft" key={x.id}><div><strong>{x.supplier} · {x.invoiceNumber}</strong><span>{x.date} · {x.category==="glass"?"Vitrage":"Accessoires"} · {x.lines.map(l=>l.label).join(", ")}</span></div><div><strong>{money(x.totalTTC)}</strong><span>Payé {money(x.paidAmount)} · Reste {money(Math.max(0,x.totalTTC-x.paidAmount))}</span></div></div>):<div className="empty-inline">Aucune facture fournisseur.</div>}
+  <section className="panel"><div className="panel-heading"><div><h3>Historique des factures</h3><p>Les totaux affichés sont ceux saisis depuis les factures originales.</p></div></div>
+   {invoices.length?[...invoices].sort((a,b)=>b.date.localeCompare(a.date)).map(x=><div className="saved-draft" key={x.id}><div><strong>{x.supplier} · {x.invoiceNumber}</strong><span>{x.date} · {x.category==="glass"?"Vitrage":"Accessoires"} · {x.lines.map(l=>l.label+" × "+l.quantity).join(", ")}</span></div><div><strong>{money(x.totalTTC)}</strong><span>Payé {money(x.paidAmount)} · Reste {money(Math.max(0,x.totalTTC-x.paidAmount))}</span></div></div>):<div className="empty-inline">Aucune facture fournisseur.</div>}
   </section>
  </div>;
 }
