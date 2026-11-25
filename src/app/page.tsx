@@ -30,11 +30,11 @@ const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency
 const remainingConfirmed=(order:StoredOrder)=>Math.max(0,order.totalTTC-order.payments.filter(p=>p.status==="confirmed").reduce((sum,p)=>sum+p.amount,0)+order.refunds.filter(r=>r.status==="confirmed").reduce((sum,r)=>sum+r.amount,0));
 function normalizeOrderNumbers(drafts: Draft[], orders: StoredOrder[]) {
  const entries=[...drafts.map(item=>({id:item.id,createdAt:item.createdAt,number:item.number})),...orders.map(item=>({id:item.id,createdAt:item.createdAt,number:item.number}))];
- const used=entries.map(item=>/^(?:C#|#C)(\\d+)$/.exec(item.number)).filter(Boolean).map(match=>Number(match![1]));
+ const used=entries.map(item=>/^(?:C#|#C)(\d+)$/.exec(item.number)).filter(Boolean).map(match=>Number(match![1]));
  let next=Math.max(0,...used)+1;
  const numbers=new Map<string,string>();
  for(const item of [...entries].sort((a,b)=>a.createdAt.localeCompare(b.createdAt)||a.id.localeCompare(b.id))){
-  const match=/^(?:C#|#C)(\\d+)$/.exec(item.number);
+  const match=/^(?:C#|#C)(\d+)$/.exec(item.number);
   numbers.set(item.id,match?`#C${match[1]}`:`#C${next++}`);
  }
  const nextDrafts=drafts.map(item=>({...item,number:numbers.get(item.id)||item.number}));
@@ -42,7 +42,7 @@ function normalizeOrderNumbers(drafts: Draft[], orders: StoredOrder[]) {
  return {drafts:nextDrafts,orders:nextOrders,changed:nextDrafts.some((item,i)=>item.number!==drafts[i].number)||nextOrders.some((item,i)=>item.number!==orders[i].number)};
 }
 function nextOrderNumber(drafts: Draft[], orders: StoredOrder[]) {
- const values=[...drafts,...orders].map(item=>Number(/^(?:C#|#C)(\\d+)$/.exec(item.number)?.[1]||0));
+ const values=[...drafts,...orders].map(item=>Number(/^(?:C#|#C)(\d+)$/.exec(item.number)?.[1]||0));
  return `#C${Math.max(0,...values)+1}`;
 }
 
