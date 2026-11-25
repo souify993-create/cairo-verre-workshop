@@ -1,15 +1,15 @@
 "use client";
 import { useMemo, useState } from "react";
-import type { CashMovement, PaymentMethod } from "@/lib/ledger";
+import type { CashMovement, PaymentMethod } from "@/lib/ledger";\nimport { deriveExpenseMovements, type ExpenseRecord } from "@/lib/operations";
 
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 const methods:PaymentMethod[]=["Espèces","Virement","Chèque"];
 const today=()=>{const now=new Date();return [now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");};
 
-export function JournalierPanel({movements}:{movements:CashMovement[]}){
+export function JournalierPanel({movements,expenses}:{movements:CashMovement[];expenses:ExpenseRecord[]}){
  const [date,setDate]=useState(today);
- const dated=useMemo(()=>movements.filter(m=>m.date===date),[movements,date]);
- const undated=useMemo(()=>movements.filter(m=>!m.date),[movements]);
+ const dailyExpenses=useMemo(()=>deriveExpenseMovements(expenses,date),[expenses,date]);\n const allMovements=useMemo(()=>[...movements,...dailyExpenses],[movements,dailyExpenses]);\n const dated=useMemo(()=>allMovements.filter(m=>m.date===date),[allMovements,date]);
+ const undated=useMemo(()=>allMovements.filter(m=>!m.date),[allMovements]);
  const incoming=dated.filter(m=>m.direction==="Entrée").reduce((s,m)=>s+m.amount,0);
  const outgoing=dated.filter(m=>m.direction==="Sortie").reduce((s,m)=>s+m.amount,0);
  return <div className="content">
