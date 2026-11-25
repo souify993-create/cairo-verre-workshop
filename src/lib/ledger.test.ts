@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { deriveLedger, type WorkshopOrder } from "./ledger";
+import { addPayment, addRefund, confirmPayment, markOrderDelivered, orderFromDraft } from "./workshop";
 
 const order = (overrides: Partial<WorkshopOrder> = {}): WorkshopOrder => ({
   id: "o1", number: "CV-001", customer: "Client A", status: "delivered", totalTTC: 500,
@@ -94,7 +95,6 @@ test("supplier cheques remain outside cash until confirmed",()=>{
 
 
 test("integrated order, cheque, refund, stock and supplier settlement flow stays consistent on rebuild",()=>{
- const {orderFromDraft,markOrderDelivered,addPayment,confirmPayment,addRefund}=require("./workshop") as typeof import("./workshop");
  const draft={id:"flow-1",number:"CV-FLOW-1",customer:"",createdAt:"2026-11-25T09:00:00.000Z",glass:[],services:[],accessories:[{label:"Poignée",quantity:2,unitPrice:10}],total:200};
  let order=markOrderDelivered(orderFromDraft(draft),"Client Flow");
  order=addPayment(order,{id:"cash-flow",method:"Espèces",amount:100,status:"confirmed",date:"2026-11-25"});
