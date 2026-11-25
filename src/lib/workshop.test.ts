@@ -55,3 +55,16 @@ test("a cheque enters the cash ledger only after explicit confirmation", () => {
   order = confirmPayment(order, "ch1");
   assert.equal(deriveLedger([order], []).cashMovements.length, 1);
 });
+
+test("changing order lines requires a matching total and updates accessory consumption", () => {
+  const delivered = markOrderDelivered(orderFromDraft(draft), "Client B");
+  assert.throws(() => reviseOrder(delivered, {
+    lines: { ...delivered.lines, accessories: [{ label: "Charnière", quantity: 3, unitPrice: 10 }] },
+  }));
+  const revised = reviseOrder(delivered, {
+    totalTTC: 230,
+    lines: { ...delivered.lines, accessories: [{ label: "Charnière", quantity: 3, unitPrice: 10 }] },
+  });
+  assert.equal(revised.accessories[0].accessoryId, "charniere");
+  assert.equal(revised.accessories[0].quantity, 3);
+});
