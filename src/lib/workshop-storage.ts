@@ -1,5 +1,6 @@
 import type { AccessoryPurchase, PaymentMethod } from "./ledger";
-import type { StoredOrder } from "./workshop";\nimport type { ExpenseRecord } from "./operations";
+import type { StoredOrder } from "./workshop";
+import type { ExpenseRecord } from "./operations";
 
 export type PurchaseLine = { label: string; quantity: number; unitPrice: number; widthMm?: number; heightMm?: number };
 export type SupplierInvoice = {
@@ -31,7 +32,8 @@ function validInvoice(v:unknown):v is SupplierInvoice {
  if(!isRecord(v)||!text(v.id)||!text(v.supplier)||!text(v.invoiceNumber)||!text(v.date)||!["glass","accessory"].includes(String(v.category))||!Array.isArray(v.lines)||!amount(v.totalHT)||!amount(v.totalTVA)||!amount(v.totalTTC)||!amount(v.paidAmount)||!["Espèces","Virement","Chèque","Non réglé"].includes(String(v.paymentMethod))||(v.paidDate!==undefined&&!text(v.paidDate)))return false;
  return v.lines.every(x=>isRecord(x)&&text(x.label)&&amount(x.quantity)&&amount(x.unitPrice)&&(x.widthMm===undefined||amount(x.widthMm))&&(x.heightMm===undefined||amount(x.heightMm)));
 }
-const validExpense=(v:unknown):v is ExpenseRecord=>isRecord(v)&&text(v.id)&&text(v.name)&&["Loyer","Eau","Électricité","Maintenance","Carburant","Avance","Salaire","Autres"].includes(String(v.category))&&amount(v.amount)&&["Jour","Semaine","Mois","Année"].includes(String(v.frequency))&&methods.includes(v.paymentMethod as PaymentMethod)&&text(v.startDate)&&(v.endDate===undefined||text(v.endDate));\nconst empty=():WorkshopStore=>({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[],expenses:[]});
+const validExpense=(v:unknown):v is ExpenseRecord=>isRecord(v)&&text(v.id)&&text(v.name)&&["Loyer","Eau","Électricité","Maintenance","Carburant","Avance","Salaire","Autres"].includes(String(v.category))&&amount(v.amount)&&["Jour","Semaine","Mois","Année"].includes(String(v.frequency))&&methods.includes(v.paymentMethod as PaymentMethod)&&text(v.startDate)&&(v.endDate===undefined||text(v.endDate));
+const empty=():WorkshopStore=>({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[],expenses:[]});
 export function decodeWorkshopStore(raw:string|null):WorkshopStore{
  if(!raw)return empty();try{const v:unknown=JSON.parse(raw);if(!isRecord(v)||v.version!==1||!Array.isArray(v.orders)||!Array.isArray(v.accessoryPurchases))return empty();return {version:1,orders:v.orders.filter(validOrder),accessoryPurchases:v.accessoryPurchases.filter(validPurchase),supplierInvoices:Array.isArray(v.supplierInvoices)?v.supplierInvoices.filter(validInvoice):[],expenses:Array.isArray(v.expenses)?v.expenses.filter(validExpense):[]};}catch{return empty();}
 }
