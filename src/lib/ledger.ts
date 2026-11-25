@@ -14,7 +14,7 @@ export type WorkshopOrder = {
   refunds: Refund[];
 };
 export type AccessoryPurchase = { accessoryId: string; label: string; quantity: number };
-export type CashMovement = { orderId: string; reference: string; method: PaymentMethod; direction: "Entrée" | "Sortie"; amount: number; kind: "Paiement" | "Remboursement" | "Achat fournisseur" | "Dépense"; counterparty?: string; date?: string };
+export type CashMovement = { orderId: string; reference: string; method: PaymentMethod; direction: "Entrée" | "Sortie"; amount: number; kind: "Paiement" | "Remboursement" | "Achat fournisseur" | "Dépense" | "Avance salaire" | "Salaire payé"; counterparty?: string; date?: string };
 export type CustomerBalance = { customer: string; total: number; paid: number; remaining: number; credit: number };
 export type LedgerSnapshot = {
   cashMovements: CashMovement[];
