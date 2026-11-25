@@ -21,7 +21,7 @@ test("workshop store reads valid orders and accessory purchases", () => {
 });
 
 test("workshop store rejects unsupported versions and malformed JSON", () => {
-  assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [] });
+  assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [] });
   assert.deepEqual(decodeWorkshopStore(JSON.stringify({ version: 2, orders: [delivered], accessoryPurchases: [] })),
     { version: 1, orders: [], accessoryPurchases: [] });
 });
@@ -30,4 +30,23 @@ test("workshop store filters malformed order records", () => {
   const malformed = { ...delivered, totalTTC: -1 };
   const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [delivered, malformed], accessoryPurchases: [] }));
   assert.equal(decoded.orders.length, 1);
+});
+
+test("supplier invoices are retained and glass invoices do not imply accessory stock", () => {
+  const invoice = {
+    id: "inv-1", supplier: "Fournisseur A", invoiceNumber: "FA-77", date: "2026-11-25",
+    category: "glass", lines: [{ label: "Verre clair", quantity: 4, unitPrice: 120, widthMm: 2000, heightMm: 1000 }],
+    totalHT: 400, totalTVA: 80, totalTTC: 480, paidAmount: 100, paymentMethod: "Virement",
+  };
+  const decoded = decodeWorkshopStore(JSON.stringify({
+    version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [invoice],
+  }));
+  assert.equal(decoded.supplierInvoices.length, 1);
+  assert.equal(decoded.supplierInvoices[0].totalTTC, 480);
+  assert.equal(decoded.accessoryPurchases.length, 0);
+});
+
+test("older local stores remain readable without supplier invoice data", () => {
+  const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [] }));
+  assert.deepEqual(decoded.supplierInvoices, []);
 });
