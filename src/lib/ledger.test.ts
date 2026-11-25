@@ -91,3 +91,23 @@ test("supplier cheques remain outside cash until confirmed",()=>{
  const result=deriveLedger([],[],[{id:"inv-cheque",supplier:"Fournisseur",invoiceNumber:"F-CH",paidAmount:0,paymentMethod:"Non réglé",payments:[{id:"sp-pending",date:"2026-11-25",amount:300,method:"Chèque",status:"pending"},{id:"sp-confirmed",date:"2026-11-26",amount:100,method:"Chèque",status:"confirmed"}]}]);
  assert.equal(result.cashMovements.length,1);assert.equal(result.cashMovements[0].amount,100);assert.equal(result.cashMovements[0].date,"2026-11-26");
 });
+
+
+test("integrated order, cheque, refund, stock and supplier settlement flow stays consistent on rebuild",()=>{
+ const {orderFromDraft,markOrderDelivered,addPayment,confirmPayment,addRefund}=require("./workshop") as typeof import("./workshop");
+ const draft={id:"flow-1",number:"CV-FLOW-1",customer:"",createdAt:"2026-11-25T09:00:00.000Z",glass:[],services:[],accessories:[{label:"Poignée",quantity:2,unitPrice:10}],total:200};
+ let order=markOrderDelivered(orderFromDraft(draft),"Client Flow");
+ order=addPayment(order,{id:"cash-flow",method:"Espèces",amount:100,status:"confirmed",date:"2026-11-25"});
+ order=addPayment(order,{id:"cheque-flow",method:"Chèque",amount:100,status:"pending",date:"2026-11-25"});
+ order=confirmPayment(order,"cheque-flow","2026-11-26T10:00:00.000Z");
+ order=addRefund(order,{id:"refund-flow",method:"Espèces",amount:25,status:"confirmed",date:"2026-11-26"});
+ const supplier=[{id:"supplier-flow",supplier:"Fournisseur Flow",invoiceNumber:"SF-1",paidAmount:30,paymentMethod:"Espèces" as const,paidDate:"2026-11-25",payments:[{id:"supplier-transfer",date:"2026-11-26",amount:20,method:"Virement" as const,status:"confirmed" as const},{id:"supplier-cheque",date:"2026-11-26",amount:10,method:"Chèque" as const,status:"pending" as const}]}];
+ const args=[order,[{accessoryId:"poignee",label:"Poignée",quantity:5}],supplier] as const;
+ const first=deriveLedger(...args),second=deriveLedger(...args);
+ assert.equal(first.stock[0].available,3);
+ assert.equal(first.customers[0].paid,175);
+ assert.equal(first.customers[0].remaining,25);
+ assert.equal(first.cashMovements.length,5);
+ assert.equal(first.cashMovements.reduce((sum,m)=>sum+(m.direction==="Entrée"?m.amount:-m.amount),0),125);
+ assert.deepEqual(second,first);
+});
