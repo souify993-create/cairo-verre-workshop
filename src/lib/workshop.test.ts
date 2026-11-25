@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addPayment, addRefund, cancelOrder, confirmPayment, confirmRefund, markOrderDelivered, orderFromDraft, reviseOrder, reviseDeliveredOrder } from "./workshop";
+import { addPayment, addRefund, cancelOrder, confirmPayment, confirmRefund, markOrderDelivered, orderFromDraft, reviseOrder, reviseDeliveredOrder, settleCustomerAvoir } from "./workshop";
 import { deriveLedger } from "./ledger";
 import type { Draft } from "./storage";
 
@@ -112,48 +112,42 @@ test("only pending cheque refunds can be confirmed", () => {
 });
 
 
-test("delivered cash order price decrease records only the difference as a cash refund", () => {
+test("delivered cash order decrease edits original Entrée and creates Avoir without Sortie", () => {
   let order = markOrderDelivered(orderFromDraft(draft), "Client B");
-  order = addPayment(order, { id: "cash-full", method: "Espèces", amount: 250, status: "confirmed" });
+  order = addPayment(order, { id: "cash-full", method: "Espèces", amount: 250, status: "confirmed", date: "2026-11-20" });
   const revised = reviseDeliveredOrder(order, { totalTTC: 200, lines: order.lines }, "Espèces");
-  assert.equal(revised.totalTTC, 200);
-  assert.equal(revised.refunds.reduce((sum, refund) => sum + (refund.status === "confirmed" ? refund.amount : 0), 0), 50);
+  assert.equal(revised.payments.find(p => p.id === "cash-full")?.amount, 200);
+  assert.equal(revised.avoirs?.[0]?.amount, 50);
   const ledger = deriveLedger([revised], []);
   assert.equal(ledger.customers[0].paid, 200);
-  assert.equal(ledger.customers[0].credit, 0);
-  assert.equal(ledger.cashMovements.filter(m => m.direction === "Sortie").reduce((sum,m)=>sum+m.amount,0), 50);
+  assert.equal(ledger.customers[0].credit, 50);
+  assert.equal(ledger.cashMovements.length, 1);
+  assert.equal(ledger.cashMovements[0].direction, "Entrée");
+  assert.equal(ledger.cashMovements[0].amount, 200);
+  const settled = settleCustomerAvoir(revised, revised.avoirs[0].id);
+  const afterSettlement = deriveLedger([settled], []);
+  assert.equal(afterSettlement.customers[0].credit, 0);
+  assert.equal(afterSettlement.cashMovements.length, 1);
+  assert.equal(afterSettlement.cashMovements[0].direction, "Entrée");
 });
 
-test("delivered cheque order price decrease keeps cheque and leaves the difference as customer credit (Avoir)", () => {
-  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
-  order = addPayment(order, { id: "cheque-full", method: "Chèque", amount: 250, status: "pending" });
-  order = confirmPayment(order, "cheque-full");
-  const revised = reviseDeliveredOrder(order, { totalTTC: 200, lines: order.lines }, "Chèque");
-  assert.deepEqual(revised.payments, order.payments);
-  const balance = deriveLedger([revised], []).customers[0];
-  assert.equal(balance.credit, 50);
-  assert.equal(balance.remaining, 0);
-});
-
-test("delivered cheque order price increase keeps cheque and leaves the difference due", () => {
-  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
-  order = addPayment(order, { id: "cheque-part", method: "Chèque", amount: 200, status: "pending" });
-  order = confirmPayment(order, "cheque-part");
-  const revised = reviseDeliveredOrder(order, { totalTTC: 300, lines: order.lines }, "Chèque");
-  assert.deepEqual(revised.payments, order.payments);
-  const balance = deriveLedger([revised], []).customers[0];
-  assert.equal(balance.remaining, 100);
-  assert.equal(balance.credit, 0);
+test("delivered cheque and effect orders cannot be edited", () => {
+  let cheque = markOrderDelivered(orderFromDraft(draft), "Client B");
+  cheque = addPayment(cheque, { id: "cheque-full", method: "Chèque", amount: 250, status: "pending" });
+  assert.throws(() => reviseDeliveredOrder(cheque, { totalTTC: 200, lines: cheque.lines }, "Chèque"));
+  let effect = markOrderDelivered(orderFromDraft(draft), "Client B");
+  effect = addPayment(effect, { id: "effect-full", method: "Effet", amount: 250, status: "pending" });
+  assert.throws(() => reviseDeliveredOrder(effect, { totalTTC: 200, lines: effect.lines }, "Effet"));
 });
 
 test("changing payment method cancels the original payment and records the replacement method", () => {
   let order = markOrderDelivered(orderFromDraft(draft), "Client B");
-  order = addPayment(order, { id: "old-cheque", method: "Chèque", amount: 250, status: "pending" });
-  const revised = reviseDeliveredOrder(order, { totalTTC: 250, lines: order.lines }, "Espèces");
-  assert.equal(revised.payments.find(payment => payment.id === "old-cheque")?.status, "cancelled");
+  order = addPayment(order, { id: "old-cash", method: "Espèces", amount: 250, status: "confirmed" });
+  const revised = reviseDeliveredOrder(order, { totalTTC: 250, lines: order.lines }, "Virement");
+  assert.equal(revised.payments.find(payment => payment.id === "old-cash")?.status, "cancelled");
   assert.equal(revised.payments.filter(payment => payment.status === "confirmed").length, 1);
-  assert.equal(revised.payments.find(payment => payment.status === "confirmed")?.method, "Espèces");
-  assert.equal(deriveLedger([revised], []).cashMovements[0].method, "Espèces");
+  assert.equal(revised.payments.find(payment => payment.status === "confirmed")?.method, "Virement");
+  assert.equal(deriveLedger([revised], []).cashMovements[0].method, "Virement");
 });
 
 test("editing delivered accessory quantities automatically changes consumed stock", () => {
