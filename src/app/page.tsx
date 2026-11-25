@@ -31,7 +31,9 @@ export default function Home(){
  const [cloudReady,setCloudReady]=useState(false),[cloudError,setCloudError]=useState("");
  const cloudRevision=useRef(0);
  const [section,setSection]=useState("Calcul"),[collapsed,setCollapsed]=useState(false),[customer,setCustomer]=useState("");
- const [glass,setGlass]=useState<GlassLine[]>([]),[services,setServices]=useState<ServiceLine[]>([]),[accessories,setAccessories]=useState<AccessoryLine[]>([]);\n const [serviceWidth,setServiceWidth]=useState(0),[serviceHeight,setServiceHeight]=useState(0),[servicePieces,setServicePieces]=useState(1);\n const measuredServices=useMemo(()=>services.map(s=>({...s,unit:serviceUnit(s.name),widthMm:serviceWidth,heightMm:serviceHeight,pieces:servicePieces,quantity:serviceQuantity(s.name,serviceWidth,serviceHeight,servicePieces)})),[services,serviceWidth,serviceHeight,servicePieces]);
+ const [glass,setGlass]=useState<GlassLine[]>([]),[services,setServices]=useState<ServiceLine[]>([]),[accessories,setAccessories]=useState<AccessoryLine[]>([]);
+ const [serviceWidth,setServiceWidth]=useState(0),[serviceHeight,setServiceHeight]=useState(0),[servicePieces,setServicePieces]=useState(1);
+ const measuredServices=useMemo(()=>services.map(s=>({...s,unit:serviceUnit(s.name),widthMm:serviceWidth,heightMm:serviceHeight,pieces:servicePieces,quantity:serviceQuantity(s.name,serviceWidth,serviceHeight,servicePieces)})),[services,serviceWidth,serviceHeight,servicePieces]);
  const [drafts,setDrafts]=useState<Draft[]>([]),[saved,setSaved]=useState(false),[editingId,setEditingId]=useState<string|null>(null);
  const [editingDeliveredId,setEditingDeliveredId]=useState<string|null>(null);
  const [deliveryDraftId,setDeliveryDraftId]=useState<string|null>(null);
