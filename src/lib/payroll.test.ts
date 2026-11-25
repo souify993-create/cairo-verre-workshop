@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { addSalaryPayment, derivePayrollMovements, summarizePayroll, type Employee, type PayrollWeek } from "./payroll";
+import { addSalaryPayment, derivePayrollCashMovements, derivePayrollMovements, summarizePayroll, type Employee, type PayrollWeek } from "./payroll";
 const employee:Employee={id:"emp-1",name:"Ali",weeklySalary:1200,active:true};
 const week:PayrollWeek={id:"w1",employeeId:"emp-1",weekStart:"2026-11-23",attendance:Array.from({length:6},(_,i)=>({date:"2026-11-"+String(23+i).padStart(2,"0"),hours:9})),advances:[{id:"a1",date:"2026-11-25",amount:200,method:"Espèces"}],salaryPayments:[]};
 test("weekly salary is prorated by attendance hours and advances reduce settlement",()=>{
@@ -34,4 +34,12 @@ test("daily salary allocations plus advances equal earned wages without double c
  assert.equal(salary.reduce((s,x)=>s+x.amount,0),1000);
  assert.equal(rows.filter(x=>x.kind==="Avance salaire").reduce((s,x)=>s+x.amount,0),200);
  assert.equal(rows.reduce((s,x)=>s+x.amount,0),1200);
+});
+
+test("La caisse uses actual advance and salary settlement dates, not daily accrual rows",()=>{
+ const paid=addSalaryPayment(week,employee,[],{id:"s-cash",date:"2026-11-29",amount:1000,method:"Espèces"});
+ const cash=derivePayrollCashMovements([paid],[employee]);
+ assert.equal(cash.length,2);
+ assert.equal(cash.reduce((s,m)=>s+m.amount,0),1200);
+ assert.ok(cash.some(m=>m.kind==="Règlement salaire"&&m.date==="2026-11-29"));
 });
