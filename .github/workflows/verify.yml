@@ -20,3 +20,15 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npx opennextjs-cloudflare build
+      - name: Smoke test Cloudflare Workers runtime
+        shell: bash
+        run: |
+          (npx wrangler dev --local --ip 127.0.0.1 --port 8787 > /tmp/cairo-verre-wrangler.log 2>&1 & echo $! > /tmp/cairo-verre-wrangler.pid)
+          for attempt in $(seq 1 45); do
+            if curl --fail --silent http://127.0.0.1:8787/ -o /tmp/cairo-verre-home.html; then
+              break
+            fi
+            sleep 2
+          done
+          test -s /tmp/cairo-verre-home.html
+          grep -qi "Cairo Verre" /tmp/cairo-verre-home.html
