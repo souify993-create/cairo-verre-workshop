@@ -172,7 +172,7 @@ export function confirmPayment(order: StoredOrder, paymentId: string, now = new 
     return { ...payment, status: "confirmed" as const };
   });
   if (!found) throw new Error("Paiement introuvable.");
-  return { ...order, payments: payments.map(payment => payment.id === paymentId ? { ...payment, date: payment.dueDate || now.slice(0, 10) } : payment), updatedAt: now };
+  return { ...order, payments, updatedAt: now };
 }
 
 export function addRefund(order: StoredOrder, refund: Refund, now = new Date().toISOString()): StoredOrder {
