@@ -7,7 +7,7 @@ export type SupplierInvoice = {
   category: "glass" | "accessory"; lines: PurchaseLine[];
   totalHT: number; totalTVA: number; totalTTC: number;
   paidAmount: number; paymentMethod: PaymentMethod | "Non réglé";
-  chequeNumber?: string; chequeDate?: string;
+  chequeNumber?: string; chequeDate?: string; paidDate?: string;
 };
 export type WorkshopStore = { version: 1; orders: StoredOrder[]; accessoryPurchases: AccessoryPurchase[]; supplierInvoices: SupplierInvoice[] };
 export const WORKSHOP_STORAGE_KEY = "cairo-verre-workshop-data";
@@ -28,7 +28,7 @@ function validOrder(v: unknown): v is StoredOrder {
 }
 function validPurchase(v:unknown):v is AccessoryPurchase{return isRecord(v)&&text(v.accessoryId)&&text(v.label)&&amount(v.quantity);}
 function validInvoice(v:unknown):v is SupplierInvoice {
- if(!isRecord(v)||!text(v.id)||!text(v.supplier)||!text(v.invoiceNumber)||!text(v.date)||!["glass","accessory"].includes(String(v.category))||!Array.isArray(v.lines)||!amount(v.totalHT)||!amount(v.totalTVA)||!amount(v.totalTTC)||!amount(v.paidAmount)||!["Espèces","Virement","Chèque","Non réglé"].includes(String(v.paymentMethod)))return false;
+ if(!isRecord(v)||!text(v.id)||!text(v.supplier)||!text(v.invoiceNumber)||!text(v.date)||!["glass","accessory"].includes(String(v.category))||!Array.isArray(v.lines)||!amount(v.totalHT)||!amount(v.totalTVA)||!amount(v.totalTTC)||!amount(v.paidAmount)||!["Espèces","Virement","Chèque","Non réglé"].includes(String(v.paymentMethod))||(v.paidDate!==undefined&&!text(v.paidDate)))return false;
  return v.lines.every(x=>isRecord(x)&&text(x.label)&&amount(x.quantity)&&amount(x.unitPrice)&&(x.widthMm===undefined||amount(x.widthMm))&&(x.heightMm===undefined||amount(x.heightMm)));
 }
 const empty=():WorkshopStore=>({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[]});
