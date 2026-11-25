@@ -31,3 +31,24 @@
 .customer-suggestions button:hover{background:#f1f8f6}
 .customer-selected-note{font-size:10px;color:#74848a;margin-top:8px}
 .customer-new-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+
+/* Compact, keyboard-friendly quote entry */
+.service-grid{grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px;margin:8px 0 10px}
+.service-chip{min-height:49px;justify-content:center;align-items:center;gap:1px;padding:5px 4px;text-align:center}
+.service-chip strong{font-size:12px;line-height:1.1;color:var(--teal-dark)}
+.service-chip span{font-size:9px;font-weight:800;color:#6b7d82;line-height:1.1}
+.service-chip small{font-size:8px;color:#96a5a8;font-weight:500}
+.service-chip.selected{background:#eaf5f2;border-color:#83b9af}
+.service-row{gap:7px;align-items:center;padding:7px 0}
+.service-code{width:42px;min-width:42px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;color:var(--teal-dark)}
+.service-code strong{font-size:12px;font-weight:800}
+.service-code span{font-size:9px;font-weight:800;color:#73858a}
+.service-price-input{width:66px;min-width:56px;height:30px;border:1px solid #dce6e5;border-radius:6px;padding:0 5px;text-align:center;font:inherit;font-size:11px;outline:none}
+.service-price-input:focus{border-color:#76b6ae;box-shadow:0 0 0 2px #eaf5f3}
+.service-quantity{min-width:78px;text-align:right}
+.service-custom-name{flex:1;min-width:90px;height:30px}
+.service-row .line-total{padding-bottom:0}
+.glass-type-group{padding:11px}
+.glass-type-group .line-row{gap:7px;padding:8px 0}
+.field input:focus{border-color:#76b6ae}
+@media(max-width:760px){.service-grid{grid-template-columns:repeat(auto-fill,minmax(58px,1fr))}.service-row{gap:5px}.service-price-input{width:58px;min-width:52px}.service-quantity{min-width:68px}}
