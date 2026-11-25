@@ -20,3 +20,14 @@
 .customer-balance-line strong{color:var(--ink)}
 @keyframes customerSlideUp{from{opacity:0;transform:translateY(10px);max-height:0}to{opacity:1;transform:translateY(0);max-height:240px}}
 @media(max-width:760px){.customer-contact-card,.customer-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+.customer-search-row{display:flex;align-items:center;gap:8px;max-width:560px}
+.customer-search-wrap{position:relative;flex:1;min-width:0}
+.customer-search-wrap>.text-input{width:100%;max-width:none}
+.customer-add{width:36px;height:36px;justify-content:center;padding:0;font-size:15px}
+.customer-suggestions{position:absolute;z-index:20;top:calc(100% + 4px);left:0;right:0;display:grid;background:#fff;border:1px solid #dfe8e7;border-radius:8px;box-shadow:0 8px 22px #1b333314;overflow:hidden}
+.customer-suggestions button{border:0;background:#fff;text-align:left;padding:10px 12px;color:var(--ink);font:inherit;font-size:12px;cursor:pointer}
+.customer-suggestions button+button{border-top:1px solid #edf0f1}
+.customer-suggestions button:hover{background:#f1f8f6}
+.customer-selected-note{font-size:10px;color:#74848a;margin-top:8px}
+.customer-new-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
