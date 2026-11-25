@@ -1,0 +1,57 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { addPayment, cancelOrder, confirmPayment, markOrderDelivered, orderFromDraft, reviseOrder } from "./workshop";
+import { deriveLedger } from "./ledger";
+import type { Draft } from "./storage";
+
+const draft: Draft = {
+  id: "d1", number: "CV-100", customer: "",
+  createdAt: "2026-11-25T09:00:00.000Z",
+  glass: [{ label: "Clair 6", widthMm: 1000, heightMm: 1000, quantity: 1, pricePerM2: 200 }],
+  services: [], accessories: [{ label: "Poignée", quantity: 2, unitPrice: 25 }],
+  total: 250,
+};
+
+test("draft conversion is inert until explicit delivery", () => {
+  const order = orderFromDraft(draft);
+  assert.equal(order.status, "draft");
+  assert.deepEqual(deriveLedger([order], []).cashMovements, []);
+  assert.equal(deriveLedger([order], []).stock[0].consumed, 0);
+});
+
+test("delivery requires a customer and creates no imaginary payment", () => {
+  const order = orderFromDraft(draft);
+  assert.throws(() => markOrderDelivered(order, " "));
+  const delivered = markOrderDelivered(order, "Client B");
+  assert.equal(delivered.status, "delivered");
+  assert.equal(delivered.payments.length, 0);
+  assert.equal(deriveLedger([delivered], [{ accessoryId: "poignee", label: "Poignée", quantity: 5 }]).stock[0].available, 3);
+});
+
+test("editing a delivered order preserves the exact payment history", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cash1", method: "Espèces", amount: 200, status: "confirmed" });
+  const revised = reviseOrder(order, { totalTTC: 150 });
+  assert.deepEqual(revised.payments, order.payments);
+  const balance = deriveLedger([revised], []).customers[0];
+  assert.equal(balance.credit, 50);
+  assert.equal(balance.paid, 200);
+});
+
+test("canceling a delivered order restores derived stock but keeps collected cash", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cash1", method: "Espèces", amount: 100, status: "confirmed" });
+  const cancelled = cancelOrder(order);
+  const ledger = deriveLedger([cancelled], [{ accessoryId: "poignee", label: "Poignée", quantity: 5 }]);
+  assert.equal(ledger.stock[0].consumed, 0);
+  assert.equal(ledger.cashMovements.length, 1);
+  assert.equal(ledger.cashMovements[0].direction, "Entrée");
+});
+
+test("a cheque enters the cash ledger only after explicit confirmation", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "ch1", method: "Chèque", amount: 250, status: "pending" });
+  assert.equal(deriveLedger([order], []).cashMovements.length, 0);
+  order = confirmPayment(order, "ch1");
+  assert.equal(deriveLedger([order], []).cashMovements.length, 1);
+});
