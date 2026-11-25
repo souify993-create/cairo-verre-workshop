@@ -19,16 +19,16 @@ export const supplierInvoicePaid = (invoice: SupplierInvoice): number => invoice
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 const text = (v: unknown): v is string => typeof v === "string";
 const amount = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0;
-const methods: PaymentMethod[] = ["Espèces", "Virement", "Chèque"];
+const methods: PaymentMethod[] = ["Espèces", "Virement", "Chèque", "Effet"];
 function validOrder(v: unknown): v is StoredOrder {
- if (!isRecord(v)||!text(v.id)||!text(v.number)||!text(v.customer)||!["draft","delivered","cancelled"].includes(String(v.status))||!amount(v.totalTTC)||!text(v.createdAt)||!text(v.updatedAt)||!Array.isArray(v.accessories)||!Array.isArray(v.payments)||!Array.isArray(v.refunds)||!isRecord(v.lines)||!Array.isArray(v.lines.glass)||!Array.isArray(v.lines.services)||!Array.isArray(v.lines.accessories)) return false;
+ if (!isRecord(v)||!text(v.id)||!text(v.number)||!text(v.customer)||!["draft","delivered","cancelled"].includes(String(v.status))||!amount(v.totalTTC)||!text(v.createdAt)||!text(v.updatedAt)||!Array.isArray(v.accessories)||!Array.isArray(v.payments)||!Array.isArray(v.refunds)||(v.avoirs!==undefined&&!Array.isArray(v.avoirs))||!isRecord(v.lines)||!Array.isArray(v.lines.glass)||!Array.isArray(v.lines.services)||!Array.isArray(v.lines.accessories)) return false;
  const uses=v.accessories.every(x=>isRecord(x)&&text(x.accessoryId)&&text(x.label)&&amount(x.quantity));
  const payments=v.payments.every(x=>isRecord(x)&&text(x.id)&&methods.includes(x.method as PaymentMethod)&&amount(x.amount)&&["pending","confirmed","cancelled"].includes(String(x.status))&&(x.date===undefined||text(x.date)));
- const refunds=v.refunds.every(x=>isRecord(x)&&text(x.id)&&methods.includes(x.method as PaymentMethod)&&amount(x.amount)&&["pending","confirmed"].includes(String(x.status))&&(x.date===undefined||text(x.date)));
+ const refunds=v.refunds.every(x=>isRecord(x)&&text(x.id)&&methods.includes(x.method as PaymentMethod)&&amount(x.amount)&&["pending","confirmed"].includes(String(x.status))&&(x.date===undefined||text(x.date)));\n const avoirs=(v.avoirs===undefined?true:(v.avoirs as unknown[]).every(x=>isRecord(x)&&text(x.id)&&amount(x.amount)&&text(x.date)&&["pending","settled"].includes(String(x.status))));
  const glass=v.lines.glass.every(x=>isRecord(x)&&text(x.label)&&amount(x.widthMm)&&amount(x.heightMm)&&amount(x.quantity)&&amount(x.pricePerM2));
  const services=v.lines.services.every(x=>isRecord(x)&&text(x.name)&&["ml","m²"].includes(String(x.unit))&&amount(x.quantity)&&amount(x.unitPrice));
  const accessories=v.lines.accessories.every(x=>isRecord(x)&&text(x.label)&&amount(x.quantity)&&amount(x.unitPrice));
- return uses&&payments&&refunds&&glass&&services&&accessories;
+ return uses&&payments&&refunds&&avoirs&&glass&&services&&accessories;
 }
 function validPurchase(v:unknown):v is AccessoryPurchase{return isRecord(v)&&text(v.accessoryId)&&text(v.label)&&amount(v.quantity);}
 function validInvoice(v:unknown):v is SupplierInvoice {
