@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { Calculator, ClipboardList, Users, Package, Wallet, FileText, Settings, Plus, Trash2, Save, CheckCircle2, Search, PanelLeftClose } from "lucide-react";
-import { AccessoryLine, GlassLine, LINEAR_SERVICES, ServiceLine, quoteTotals, areaM2, serviceUnit } from "@/lib/calculations";
+import { AccessoryLine, GlassLine, LINEAR_SERVICES, ServiceLine, quoteTotals, areaM2, serviceUnit, isValidQuote } from "@/lib/calculations";
 import { readDrafts, writeDrafts } from "@/lib/storage";
 import { addPayment, addRefund, cancelOrder, confirmPayment, confirmRefund, markOrderDelivered, orderFromDraft } from "@/lib/workshop";
 import { deriveLedger } from "@/lib/ledger";
@@ -28,7 +28,7 @@ export default function Home(){
  const cashMovements=useMemo(()=>[...ledger.cashMovements,...derivePayrollCashMovements(workshop.payrollWeeks||[],workshop.employees||[])],[ledger,workshop.payrollWeeks,workshop.employees]);
  useEffect(()=>{setDrafts(readDrafts());setWorkshop(readWorkshopStore());},[]);
  const totals=useMemo(()=>quoteTotals(glass,services,accessories),[glass,services,accessories]);
-  const validQuote=(glass.length>0||services.length>0||accessories.length>0)&&glass.every(x=>x.label.trim()&&x.widthMm>0&&x.heightMm>0&&x.quantity>0&&Number.isFinite(x.pricePerM2)&&x.pricePerM2>=0)&&services.every(x=>x.name.trim()&&x.quantity>0&&Number.isFinite(x.unitPrice)&&x.unitPrice>=0)&&accessories.every(x=>x.label.trim()&&x.quantity>0&&Number.isFinite(x.unitPrice)&&x.unitPrice>=0);
+  const validQuote=isValidQuote(glass,services,accessories);
  const persistDraft=()=>{if(!validQuote){alert("Complétez les désignations, dimensions et quantités avant d’enregistrer le devis.");return;}const existing=drafts.find(x=>x.id===editingId);const d:Draft={id:existing?.id||crypto.randomUUID(),number:existing?.number||"CV-"+String(Date.now()).slice(-6),customer,createdAt:existing?.createdAt||new Date().toISOString(),glass,services,accessories,total:totals.ttc};const next=existing?drafts.map(x=>x.id===d.id?d:x):[d,...drafts];if(!writeDrafts(next)){alert("Impossible d’enregistrer les données sur cet appareil. Vérifiez l’espace disponible et les paramètres du navigateur.");return;}setDrafts(next);setEditingId(d.id);setSaved(true);window.setTimeout(()=>setSaved(false),2500);};
  const saveWorkshop=(next:WorkshopStore)=>{if(!writeWorkshopStore(next)){alert("Impossible d’enregistrer la commande sur cet appareil.");return false;}setWorkshop(next);return true;};
  const addAccessoryPurchase=(purchase:{accessoryId:string;label:string;quantity:number})=>{if(!Number.isFinite(purchase.quantity)||purchase.quantity<=0)return;saveWorkshop({...workshop,accessoryPurchases:[...workshop.accessoryPurchases,purchase]});};
