@@ -62,10 +62,11 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       stockMap.set(use.accessoryId, row);
     }
     for (const payment of order.payments) {
-      if (payment.status === "pending" || payment.status === "cancelled" || (!payment.status && (payment.method === "Chèque" || payment.method === "Effet"))) continue;
+      if (payment.status === "cancelled") continue;
       const amount = positive(payment.amount);
       if (!amount) continue;
       if (customer) customerMap.get(customer)!.paid += amount;
+      if (payment.status === "pending" || (!payment.status && (payment.method === "Chèque" || payment.method === "Effet"))) continue;
       cashMovements.push({ orderId: order.id, reference: order.number, method: payment.method, direction: "Entrée", amount, kind: "Paiement", ...(payment.date ? { date: payment.date } : {}) });
     }
     for (const refund of order.refunds) {
