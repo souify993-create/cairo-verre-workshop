@@ -11,7 +11,8 @@ const today=()=>{const now=new Date();return [now.getFullYear(),String(now.getMo
 export function JournalierPanel({movements,expenses,employees,payrollWeeks}:{movements:CashMovement[];expenses:ExpenseRecord[];employees:Employee[];payrollWeeks:PayrollWeek[]}){
  const [date,setDate]=useState(today);
  const dailyExpenses=useMemo(()=>deriveExpenseMovements(expenses,date),[expenses,date]);
- const allMovements=useMemo(()=>[...movements,...dailyExpenses],[movements,dailyExpenses]);
+ const payrollMovements=useMemo(()=>derivePayrollMovements(payrollWeeks,employees),[payrollWeeks,employees]);
+ const allMovements=useMemo(()=>[...movements,...dailyExpenses,...payrollMovements],[movements,dailyExpenses,payrollMovements]);
  const dated=useMemo(()=>allMovements.filter(m=>m.date===date),[allMovements,date]);
  const undated=useMemo(()=>allMovements.filter(m=>!m.date),[allMovements]);
  const incoming=dated.filter(m=>m.direction==="Entrée").reduce((s,m)=>s+m.amount,0);
