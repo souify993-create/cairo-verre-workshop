@@ -52,3 +52,14 @@ test("cancellation does not erase collected money, but does not consume stock or
   assert.equal(result.customers[0].total, 0);
   assert.equal(result.customers[0].credit, 500);
 });
+
+test("confirmed supplier payments are cash outflows; unpaid cheques are excluded", () => {
+  const result = deriveLedger([], [], [
+    { id: "sup-1", supplier: "Fournisseur Verre", invoiceNumber: "FV-1", paidAmount: 250, paymentMethod: "Virement" },
+    { id: "sup-2", supplier: "Fournisseur Accessoires", invoiceNumber: "FA-2", paidAmount: 0, paymentMethod: "Chèque" },
+  ]);
+  assert.equal(result.cashMovements.length, 1);
+  assert.equal(result.cashMovements[0].direction, "Sortie");
+  assert.equal(result.cashMovements[0].amount, 250);
+  assert.equal(result.cashMovements[0].counterparty, "Fournisseur Verre");
+});
