@@ -5,7 +5,8 @@ export type GlassLine = { label:string; widthMm:number; heightMm:number; quantit
 export type AccessoryLine = { label:string; quantity:number; unitPrice:number };
 const normalizedServiceName=(name:string)=>name.trim().toLocaleUpperCase("fr").replace(/[.]/g,"").replace(/\s+/g," ").replace("ASSEMPLAGE","ASSEMBLAGE").replace("RECTILLING","RCT").replace("RCT TOTAL","RTC TOTAL");
 export const serviceUnit=(name:string):"ml"|"m²"=>LINEAR_SERVICES.includes(normalizedServiceName(name) as typeof LINEAR_SERVICES[number])?"ml":"m²";
-export const areaM2=(w:number,h:number,q:number)=>Math.max(0,w)*Math.max(0,h)*Math.max(0,q)/1_000_000;
+// Cairo Verre adds 20 mm to each entered dimension for area pricing only; entered dimensions remain unchanged.
+export const areaM2=(w:number,h:number,q:number)=>(Math.max(0,w)+20)*(Math.max(0,h)+20)*Math.max(0,q)/1_000_000;
 export const lineTotal=(q:number,p:number)=>Math.max(0,q)*Math.max(0,p);
 export function serviceQuantity(name:string,widthMm:number,heightMm:number,pieces:number):number{
  const w=Math.max(0,widthMm)/1000,h=Math.max(0,heightMm)/1000,q=Math.max(0,pieces),key=normalizedServiceName(name);
