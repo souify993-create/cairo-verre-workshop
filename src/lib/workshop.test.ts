@@ -82,7 +82,8 @@ test("actual refunds cannot exceed money collected for that order", () => {
 test("a cheque refund stays pending until encashment and respects confirmed receipts", () => {
   let order = markOrderDelivered(orderFromDraft(draft), "Client B");
   order = addPayment(order, { id: "cash-refund", method: "Espèces", amount: 100, status: "confirmed" });
-  order = addRefund(order, { id: "cheque-refund", method: "Chèque", amount: 80, status: "pending" });
+  order = addRefund(order, { id: "cheque-refund", method: "Chèque", amount: 80, status: "confirmed" });
+  assert.equal(order.refunds.find(r => r.id === "cheque-refund")?.status, "pending");
   assert.equal(deriveLedger([order], []).cashMovements.filter(m => m.direction === "Sortie").length, 0);
   order = addRefund(order, { id: "cash-refund-2", method: "Espèces", amount: 30, status: "confirmed" });
   assert.throws(() => confirmRefund(order, "cheque-refund", "2026-11-25T12:00:00.000Z"));
