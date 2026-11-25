@@ -29,3 +29,12 @@ export function addSalaryPayment(week:PayrollWeek,employee:Employee,previousWeek
  if(week.salaryPayments.some(p=>p.id===payment.id))throw new Error("Identifiant de paiement déjà utilisé.");
  return {...week,salaryPayments:[...week.salaryPayments,payment]};
 }
+
+export type PayrollCashMovement={orderId:string;reference:string;method:PaymentMethod;direction:"Sortie";amount:number;kind:"Avance salaire"|"Salaire payé";counterparty:string;date:string};
+export function derivePayrollMovements(weeks:PayrollWeek[],employees:Employee[]):PayrollCashMovement[]{
+ const names=new Map(employees.map(e=>[e.id,e.name]));
+ return weeks.flatMap(week=>[
+  ...week.advances.map(a=>({orderId:a.id,reference:week.weekStart,method:a.method,direction:"Sortie" as const,amount:nonnegative(a.amount),kind:"Avance salaire" as const,counterparty:names.get(week.employeeId)||"Employé",date:a.date})),
+  ...week.salaryPayments.map(p=>({orderId:p.id,reference:week.weekStart,method:p.method,direction:"Sortie" as const,amount:nonnegative(p.amount),kind:"Salaire payé" as const,counterparty:names.get(week.employeeId)||"Employé",date:p.date}))
+ ]);
+}
