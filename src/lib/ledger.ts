@@ -72,7 +72,14 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
     }
   }
 
-  for (const invoice of supplierInvoices) {\n    const amount = positive(invoice.paidAmount);\n    if (amount > 0 && invoice.paymentMethod !== "Non réglé") {\n      cashMovements.push({ orderId: invoice.id, reference: invoice.invoiceNumber, method: invoice.paymentMethod, direction: "Sortie", amount, kind: "Achat fournisseur", counterparty: invoice.supplier, ...(invoice.paidDate ? { date: invoice.paidDate } : {}) });\n    }\n  }\n\n  const customers = [...customerMap.entries()].map(([customer, values]) => ({
+  for (const invoice of supplierInvoices) {
+    const amount = positive(invoice.paidAmount);
+    if (amount > 0 && invoice.paymentMethod !== "Non réglé") {
+      cashMovements.push({ orderId: invoice.id, reference: invoice.invoiceNumber, method: invoice.paymentMethod, direction: "Sortie", amount, kind: "Achat fournisseur", counterparty: invoice.supplier, ...(invoice.paidDate ? { date: invoice.paidDate } : {}) });
+    }
+  }
+
+  const customers = [...customerMap.entries()].map(([customer, values]) => ({
     customer,
     total: values.total,
     paid: values.paid,
