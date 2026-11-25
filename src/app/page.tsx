@@ -17,9 +17,12 @@ import { ExpensesPanel } from "@/components/expenses-panel";
 import type { ExpenseRecord } from "@/lib/operations";
 import { derivePayrollCashMovements } from "@/lib/payroll";
 import { PersonnelPanel } from "@/components/personnel-panel";
+import { AdminLogin } from "@/components/admin-login";
+import { createSupabaseBrowserClient } from "@/lib/supabase";
 const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:ClipboardList},{label:"La caisse",icon:Wallet},{label:"Journalier",icon:FileText},{label:"Clients & fournisseurs",icon:Users},{label:"Personnel",icon:Users},{label:"Stock",icon:Package},{label:"Dépense",icon:Wallet}];
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 export default function Home(){
+ const [authReady,setAuthReady]=useState(false),[isAdmin,setIsAdmin]=useState(false);
  const [section,setSection]=useState("Calcul"),[collapsed,setCollapsed]=useState(false),[customer,setCustomer]=useState("");
  const [glass,setGlass]=useState<GlassLine[]>([]),[services,setServices]=useState<ServiceLine[]>([]),[accessories,setAccessories]=useState<AccessoryLine[]>([]);
  const [drafts,setDrafts]=useState<Draft[]>([]),[saved,setSaved]=useState(false),[editingId,setEditingId]=useState<string|null>(null);
@@ -27,6 +30,19 @@ export default function Home(){
  const ledger=useMemo(()=>deriveLedger(workshop.orders,workshop.accessoryPurchases,workshop.supplierInvoices),[workshop]);
  const cashMovements=useMemo(()=>[...ledger.cashMovements,...derivePayrollCashMovements(workshop.payrollWeeks||[],workshop.employees||[])],[ledger,workshop.payrollWeeks,workshop.employees]);
  useEffect(()=>{setDrafts(readDrafts());setWorkshop(readWorkshopStore());},[]);
+ useEffect(()=>{
+  const supabase=createSupabaseBrowserClient();
+  let active=true;
+  supabase.auth.getSession().then(({data})=>{
+   if(!active)return;
+   setIsAdmin(data.session?.user.app_metadata?.role==="admin");
+   setAuthReady(true);
+  }).catch(()=>{if(active)setAuthReady(true);});
+  const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+   if(active)setIsAdmin(session?.user.app_metadata?.role==="admin");
+  });
+  return ()=>{active=false;subscription.unsubscribe();};
+ },[]);
  const totals=useMemo(()=>quoteTotals(glass,services,accessories),[glass,services,accessories]);
   const validQuote=isValidQuote(glass,services,accessories);
  const persistDraft=()=>{if(!validQuote){alert("Complétez les désignations, dimensions et quantités avant d’enregistrer le devis.");return;}const existing=drafts.find(x=>x.id===editingId);const d:Draft={id:existing?.id||crypto.randomUUID(),number:existing?.number||"CV-"+String(Date.now()).slice(-6),customer,createdAt:existing?.createdAt||new Date().toISOString(),glass,services,accessories,total:totals.ttc};const next=existing?drafts.map(x=>x.id===d.id?d:x):[d,...drafts];if(!writeDrafts(next)){alert("Impossible d’enregistrer les données sur cet appareil. Vérifiez l’espace disponible et les paramètres du navigateur.");return;}setDrafts(next);setEditingId(d.id);setSaved(true);window.setTimeout(()=>setSaved(false),2500);};
@@ -44,10 +60,12 @@ export default function Home(){
  const updateGlass=(i:number,p:Partial<GlassLine>)=>setGlass(a=>a.map((x,n)=>n===i?{...x,...p}:x));
  const updateService=(i:number,p:Partial<ServiceLine>)=>setServices(a=>a.map((x,n)=>n===i?{...x,...p,...(p.name!==undefined?{unit:serviceUnit(p.name)}:{})}:x));
  const updateAccessory=(i:number,p:Partial<AccessoryLine>)=>setAccessories(a=>a.map((x,n)=>n===i?{...x,...p}:x));
+ if(!authReady)return <main style={{minHeight:"100vh",display:"grid",placeItems:"center",background:"#f4f6f8",color:"#263746",fontFamily:"Arial,sans-serif"}}>Chargement de l’espace administrateur…</main>;
+ if(!isAdmin)return <AdminLogin onAuthenticated={()=>setIsAdmin(true)}/>;
  return <main className="shell">
  <aside className={collapsed?"sidebar collapsed":"sidebar"}><div className="brand"><div className="brand-mark">CV</div>{!collapsed&&<div><strong>CAIRO VERRE</strong><small>ATELIER · MEDIOUNA</small></div>}</div><button className="collapse" onClick={()=>setCollapsed(!collapsed)} aria-label="Réduire le menu"><PanelLeftClose size={17}/></button><div className="nav-caption">{!collapsed&&"ESPACE DE TRAVAIL"}</div>
  {nav.map(item=><button key={item.label} className={"nav-item "+(section===item.label?"active":"")} onClick={()=>setSection(item.label)} title={item.label}><item.icon size={18}/>{!collapsed&&<span>{item.label}</span>}</button>)}<div className="sidebar-bottom"><Settings size={17}/>{!collapsed&&<span>Paramètres</span>}</div></aside>
- <section className="workspace"><header className="topbar"><div><span className="eyebrow">CAIRO VERRE / ATELIER</span><h1>{section}</h1></div><div className="top-right"><span className="status-dot"/><span>Session locale</span><div className="avatar">CV</div></div></header>
+ <section className="workspace"><header className="topbar"><div><span className="eyebrow">CAIRO VERRE / ATELIER</span><h1>{section}</h1></div><div className="top-right"><span className="status-dot"/><span>Session locale</span><button className="add-btn" onClick={async()=>{await createSupabaseBrowserClient().auth.signOut();setIsAdmin(false);}}>Déconnexion</button><div className="avatar">CV</div></div></header>
  {section==="Calcul"?<div className="content"><div className="intro"><div><h2>{editingId?"Modifier le brouillon":"Nouveau devis"}</h2><p>Composez une commande : vitrage, services et accessoires dans un seul calcul.</p></div><div className="intro-actions"><span className="draft-count">{drafts.length} brouillon(s)</span><button className="add-btn" onClick={()=>{setCustomer("");setGlass([]);setServices([]);setAccessories([]);setEditingId(null);setSaved(false);}}>+ Nouveau</button></div></div><div className="form-grid"><div className="main-column">
  <section className="panel"><div className="panel-heading"><div><span className="step">01</span><div><h3>Client</h3><p>Le client sera enregistré à la livraison.</p></div></div></div><input className="text-input" value={customer} onChange={e=>setCustomer(e.target.value)} placeholder="Nom du client (facultatif pour le brouillon)"/></section>
  <section className="panel"><div className="panel-heading"><div><span className="step">02</span><div><h3>Vitrage</h3><p>Dimensions en millimètres · tarif de vente variable par commande.</p></div></div><button className="add-btn" onClick={()=>setGlass(a=>[...a,{label:"",widthMm:0,heightMm:0,quantity:1,pricePerM2:0}])}><Plus size={15}/> Ajouter verre</button></div>
