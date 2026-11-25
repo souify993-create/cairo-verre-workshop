@@ -68,6 +68,51 @@ export function reviseOrder(
   return { ...order, customer, totalTTC, lines, accessories, updatedAt: now };
 }
 
+/** Revises a delivered order and reconciles its payment method without rewriting its history. */
+export function reviseDeliveredOrder(
+  order: StoredOrder,
+  changes: { customer?: string; totalTTC: number; lines: OrderDocumentLines },
+  paymentMethod?: Payment["method"],
+  now = new Date().toISOString(),
+): StoredOrder {
+  if (order.status !== "delivered") throw new Error("Seule une commande livrée peut être modifiée ici.");
+  const revised = reviseOrder(order, changes, now);
+  const activePayments = order.payments.filter(payment => payment.status !== "cancelled");
+  const methods = [...new Set(activePayments.map(payment => payment.method))];
+
+  if (paymentMethod && methods.length > 0 && (methods.length !== 1 || methods[0] !== paymentMethod)) {
+    if (order.refunds.some(refund => refund.status === "confirmed")) {
+      throw new Error("Impossible de changer le mode après un remboursement confirmé. Gardez le mode initial et modifiez le montant.");
+    }
+    const paidAmount = activePayments.reduce((sum, payment) => sum + payment.amount, 0);
+    const payments = order.payments.map(payment => payment.status === "cancelled" ? payment : { ...payment, status: "cancelled" as const });
+    const replacement: Payment[] = paidAmount > 0 ? [{
+      id: crypto.randomUUID(),
+      method: paymentMethod,
+      amount: paidAmount,
+      status: paymentMethod === "Chèque" ? "pending" : "confirmed",
+      date: now.slice(0, 10),
+    }] : [];
+    return { ...revised, payments: [...payments, ...replacement], updatedAt: now };
+  }
+
+  // Cash overpayment is returned immediately. Cheque overpayment is deliberately
+  // left as customer credit (Avoir); an increase remains as customer balance due.
+  if (methods.length === 1 && methods[0] === "Espèces") {
+    const received = order.payments.filter(payment => payment.method === "Espèces" && payment.status === "confirmed")
+      .reduce((sum, payment) => sum + payment.amount, 0);
+    const alreadyRefunded = order.refunds.filter(refund => refund.method === "Espèces" && refund.status === "confirmed")
+      .reduce((sum, refund) => sum + refund.amount, 0);
+    const refundable = Math.max(0, received - alreadyRefunded - revised.totalTTC);
+    if (refundable > 0.009) {
+      return addRefund(revised, {
+        id: crypto.randomUUID(), method: "Espèces", amount: refundable, status: "confirmed", date: now.slice(0, 10),
+      }, now);
+    }
+  }
+  return revised;
+}
+
 export function cancelOrder(order: StoredOrder, now = new Date().toISOString()): StoredOrder {
   if (order.status === "cancelled") return order;
   return { ...order, status: "cancelled", updatedAt: now };
