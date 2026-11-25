@@ -45,9 +45,10 @@ test("only an actual confirmed refund creates a cash outflow and reduces credit"
   assert.equal(result.customers[0].credit, 200);
 });
 
-test("cancelled orders have no derived effects", () => {
+test("cancellation does not erase collected money, but does not consume stock or count sales", () => {
   const result = deriveLedger([order({ status: "cancelled" })], [{ accessoryId: "acc1", label: "Poignée", quantity: 10 }]);
-  assert.equal(result.cashMovements.length, 0);
+  assert.equal(result.cashMovements.length, 1);
   assert.equal(result.stock[0].consumed, 0);
-  assert.equal(result.customers.length, 0);
+  assert.equal(result.customers[0].total, 0);
+  assert.equal(result.customers[0].credit, 500);
 });
