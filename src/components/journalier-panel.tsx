@@ -5,7 +5,7 @@ import { deriveExpenseMovements, type ExpenseRecord } from "@/lib/operations";
 import { derivePayrollMovements, type Employee, type PayrollWeek } from "@/lib/payroll";
 
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
-const methods:PaymentMethod[]=["Espèces","Virement","Chèque"];
+const methods:PaymentMethod[]=["Espèces","Virement","Chèque","Effet"];
 const today=()=>{const now=new Date();return [now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");};
 
 export function JournalierPanel({movements,scheduledMovements=[],expenses,employees,payrollWeeks}:{movements:CashMovement[];scheduledMovements?:CashMovement[];expenses:ExpenseRecord[];employees:Employee[];payrollWeeks:PayrollWeek[]}){
