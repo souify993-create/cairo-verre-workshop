@@ -52,7 +52,10 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       if (order.status === "delivered") row.total += positive(order.totalTTC);
       customerMap.set(customer, row);
     }
-    if (order.status === "delivered") for (const avoir of order.avoirs || []) {\n      if (avoir.status === "pending" && customer) customerMap.get(customer)!.avoir += positive(avoir.amount);\n    }\n    if (order.status === "delivered") for (const use of order.accessories) {
+    if (order.status === "delivered") for (const avoir of order.avoirs || []) {
+      if (avoir.status === "pending" && customer) customerMap.get(customer)!.avoir += positive(avoir.amount);
+    }
+    if (order.status === "delivered") for (const use of order.accessories) {
       const row = stockMap.get(use.accessoryId) ?? { label: use.label, purchased: 0, consumed: 0 };
       row.label = use.label || row.label;
       row.consumed += positive(use.quantity);
