@@ -30,11 +30,30 @@ export function addSalaryPayment(week:PayrollWeek,employee:Employee,previousWeek
  return {...week,salaryPayments:[...week.salaryPayments,payment]};
 }
 
-export type PayrollCashMovement={orderId:string;reference:string;method:PaymentMethod;direction:"Sortie";amount:number;kind:"Avance salaire"|"Salaire payé";counterparty:string;date:string};
+export type PayrollCashMovement={orderId:string;reference:string;method:PaymentMethod;direction:"Sortie";amount:number;kind:"Avance salaire"|"Salaire";counterparty:string;date:string};
 export function derivePayrollMovements(weeks:PayrollWeek[],employees:Employee[]):PayrollCashMovement[]{
- const names=new Map(employees.map(e=>[e.id,e.name]));
- return weeks.flatMap(week=>[
-  ...week.advances.map(a=>({orderId:a.id,reference:week.weekStart,method:a.method,direction:"Sortie" as const,amount:nonnegative(a.amount),kind:"Avance salaire" as const,counterparty:names.get(week.employeeId)||"Employé",date:a.date})),
-  ...week.salaryPayments.map(p=>({orderId:p.id,reference:week.weekStart,method:p.method,direction:"Sortie" as const,amount:nonnegative(p.amount),kind:"Salaire payé" as const,counterparty:names.get(week.employeeId)||"Employé",date:p.date}))
- ]);
+ const output:PayrollCashMovement[]=[];
+ for(const employee of employees){
+  let advanceDebt=0;
+  const employeeWeeks=weeks.filter(w=>w.employeeId===employee.id).sort((a,b)=>a.weekStart.localeCompare(b.weekStart));
+  for(const week of employeeWeeks){
+   const days=[...week.attendance].sort((a,b)=>a.date.localeCompare(b.date));
+   const hours=days.reduce((sum,d)=>sum+nonnegative(d.hours),0);
+   const earned=employee.weeklySalary/(6*9)*hours;
+   const advances=[...week.advances].sort((a,b)=>a.date.localeCompare(b.date));
+   const advanceTotal=advances.reduce((sum,a)=>sum+nonnegative(a.amount),0);
+   for(const advance of advances){
+    if(advance.amount>0)output.push({orderId:advance.id,reference:week.weekStart,method:"Espèces",direction:"Sortie",amount:nonnegative(advance.amount),kind:"Avance salaire",counterparty:employee.name,date:advance.date});
+   }
+   const dailySalary=Math.max(0,earned-advanceDebt-advanceTotal);
+   if(dailySalary>0&&hours>0){
+    for(const day of days){
+     const amount=dailySalary*nonnegative(day.hours)/hours;
+     if(amount>0)output.push({orderId:week.id+"-"+day.date,reference:week.weekStart,method:"Espèces",direction:"Sortie",amount,kind:"Salaire",counterparty:employee.name,date:day.date});
+    }
+   }
+   advanceDebt=Math.max(0,advanceDebt+advanceTotal-earned);
+  }
+ }
+ return output;
 }
