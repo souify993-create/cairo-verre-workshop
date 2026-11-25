@@ -1,0 +1,48 @@
+import type { PaymentMethod } from "./ledger";
+
+export type ExpenseCategory = "Loyer" | "Eau" | "Électricité" | "Maintenance" | "Carburant" | "Avance" | "Salaire" | "Autres";
+export type ExpenseFrequency = "Jour" | "Semaine" | "Mois" | "Année";
+export type ExpenseRecord = {
+  id: string;
+  name: string;
+  category: ExpenseCategory;
+  amount: number;
+  frequency: ExpenseFrequency;
+  paymentMethod: PaymentMethod;
+  startDate: string;
+  endDate?: string;
+};
+export type OperationalMovement = {
+  orderId: string;
+  reference: string;
+  method: PaymentMethod;
+  direction: "Sortie";
+  amount: number;
+  kind: "Dépense";
+  counterparty: string;
+  date: string;
+};
+
+const divisor: Record<ExpenseFrequency, number> = { Jour: 1, Semaine: 6, Mois: 30, Année: 365 };
+const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(value + "T00:00:00"));
+export function dailyExpenseAmount(expense: ExpenseRecord): number {
+  return Number.isFinite(expense.amount) && expense.amount > 0 ? expense.amount / divisor[expense.frequency] : 0;
+}
+export function deriveExpenseMovements(expenses: ExpenseRecord[], date: string): OperationalMovement[] {
+  if (!validDate(date)) return [];
+  return expenses.filter(expense =>
+    validDate(expense.startDate) &&
+    expense.startDate <= date &&
+    (!expense.endDate || (validDate(expense.endDate) && expense.endDate >= date)) &&
+    dailyExpenseAmount(expense) > 0
+  ).map(expense => ({
+    orderId: expense.id,
+    reference: expense.name,
+    method: expense.paymentMethod,
+    direction: "Sortie",
+    amount: dailyExpenseAmount(expense),
+    kind: "Dépense",
+    counterparty: expense.category,
+    date,
+  }));
+}
