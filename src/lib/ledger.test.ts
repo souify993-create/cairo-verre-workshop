@@ -17,15 +17,15 @@ test("draft orders have no stock, customer or cash effects", () => {
   assert.equal(result.stock[0].consumed, 0);
 });
 
-test("delivered order consumes accessories and records only confirmed payments", () => {
+test("delivered order counts handed-over cheques against debt but only confirmed payments enter cash", () => {
   const result = deriveLedger([order({ payments: [
     { id: "p1", method: "Espèces", amount: 300, status: "confirmed" },
     { id: "p2", method: "Chèque", amount: 200, status: "pending" },
   ] })], [{ accessoryId: "acc1", label: "Poignée", quantity: 10 }]);
   assert.equal(result.stock[0].available, 8);
   assert.equal(result.cashMovements.length, 1);
-  assert.equal(result.customers[0].paid, 300);
-  assert.equal(result.customers[0].remaining, 200);
+  assert.equal(result.customers[0].paid, 500);
+  assert.equal(result.customers[0].remaining, 0);
 });
 
 test("rebuilding after a price edit does not duplicate payments and calculates customer credit", () => {
