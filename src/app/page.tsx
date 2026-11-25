@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Calculator, ClipboardList, Users, Package, Wallet, FileText, Settings, Plus, Trash2, Save, CheckCircle2, Search, PanelLeftClose } from "lucide-react";
 import { AccessoryLine, GlassLine, LINEAR_SERVICES, ServiceLine, quoteTotals, areaM2, serviceUnit } from "@/lib/calculations";
-import { Draft, readDrafts, writeDrafts } from "@/lib/storage";
+import { readDrafts, writeDrafts } from "@/lib/storage";
+import type { Draft } from "@/lib/storage";
 const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:ClipboardList},{label:"Journalier",icon:FileText},{label:"Clients & fournisseurs",icon:Users},{label:"Personnel",icon:Users},{label:"Stock",icon:Package},{label:"Dépense",icon:Wallet}];
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 export default function Home(){
