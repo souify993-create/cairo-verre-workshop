@@ -106,14 +106,15 @@ export function confirmPayment(order: StoredOrder, paymentId: string, now = new 
 export function addRefund(order: StoredOrder, refund: Refund, now = new Date().toISOString()): StoredOrder {
   if (!Number.isFinite(refund.amount) || refund.amount <= 0) throw new Error("Le montant du remboursement doit être supérieur à zéro.");
   if (order.refunds.some((item) => item.id === refund.id)) throw new Error("Identifiant de remboursement déjà utilisé.");
-  if (refund.status === "confirmed") {
+  const status = refund.method === "Chèque" ? "pending" : refund.status;
+  if (status === "confirmed") {
     const collected = order.payments.filter(p => p.status === "confirmed").reduce((sum, p) => sum + p.amount, 0);
     const alreadyRefunded = order.refunds.filter(r => r.status === "confirmed").reduce((sum, r) => sum + r.amount, 0);
     if (alreadyRefunded + refund.amount > collected) {
       throw new Error("Le remboursement dépasse le montant réellement encaissé pour cette commande.");
     }
   }
-  return { ...order, refunds: [...order.refunds, { ...refund, date: refund.date ?? now.slice(0, 10) }], updatedAt: now };
+  return { ...order, refunds: [...order.refunds, { ...refund, status, date: refund.date ?? now.slice(0, 10) }], updatedAt: now };
 }
 
 export function confirmRefund(order: StoredOrder, refundId: string, now = new Date().toISOString()): StoredOrder {
