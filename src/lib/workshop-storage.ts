@@ -1,5 +1,5 @@
 import type { AccessoryPurchase, PaymentMethod } from "./ledger";
-import type { StoredOrder } from "./workshop";
+import type { StoredOrder } from "./workshop";\nimport type { ExpenseRecord } from "./operations";
 
 export type PurchaseLine = { label: string; quantity: number; unitPrice: number; widthMm?: number; heightMm?: number };
 export type SupplierInvoice = {
@@ -9,7 +9,7 @@ export type SupplierInvoice = {
   paidAmount: number; paymentMethod: PaymentMethod | "Non réglé";
   chequeNumber?: string; chequeDate?: string; paidDate?: string;
 };
-export type WorkshopStore = { version: 1; orders: StoredOrder[]; accessoryPurchases: AccessoryPurchase[]; supplierInvoices: SupplierInvoice[] };
+export type WorkshopStore = { version: 1; orders: StoredOrder[]; accessoryPurchases: AccessoryPurchase[]; supplierInvoices: SupplierInvoice[]; expenses: ExpenseRecord[] };
 export const WORKSHOP_STORAGE_KEY = "cairo-verre-workshop-data";
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -31,9 +31,9 @@ function validInvoice(v:unknown):v is SupplierInvoice {
  if(!isRecord(v)||!text(v.id)||!text(v.supplier)||!text(v.invoiceNumber)||!text(v.date)||!["glass","accessory"].includes(String(v.category))||!Array.isArray(v.lines)||!amount(v.totalHT)||!amount(v.totalTVA)||!amount(v.totalTTC)||!amount(v.paidAmount)||!["Espèces","Virement","Chèque","Non réglé"].includes(String(v.paymentMethod))||(v.paidDate!==undefined&&!text(v.paidDate)))return false;
  return v.lines.every(x=>isRecord(x)&&text(x.label)&&amount(x.quantity)&&amount(x.unitPrice)&&(x.widthMm===undefined||amount(x.widthMm))&&(x.heightMm===undefined||amount(x.heightMm)));
 }
-const empty=():WorkshopStore=>({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[]});
+const validExpense=(v:unknown):v is ExpenseRecord=>isRecord(v)&&text(v.id)&&text(v.name)&&["Loyer","Eau","Électricité","Maintenance","Carburant","Avance","Salaire","Autres"].includes(String(v.category))&&amount(v.amount)&&["Jour","Semaine","Mois","Année"].includes(String(v.frequency))&&methods.includes(v.paymentMethod as PaymentMethod)&&text(v.startDate)&&(v.endDate===undefined||text(v.endDate));\nconst empty=():WorkshopStore=>({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[],expenses:[]});
 export function decodeWorkshopStore(raw:string|null):WorkshopStore{
- if(!raw)return empty();try{const v:unknown=JSON.parse(raw);if(!isRecord(v)||v.version!==1||!Array.isArray(v.orders)||!Array.isArray(v.accessoryPurchases))return empty();return {version:1,orders:v.orders.filter(validOrder),accessoryPurchases:v.accessoryPurchases.filter(validPurchase),supplierInvoices:Array.isArray(v.supplierInvoices)?v.supplierInvoices.filter(validInvoice):[]};}catch{return empty();}
+ if(!raw)return empty();try{const v:unknown=JSON.parse(raw);if(!isRecord(v)||v.version!==1||!Array.isArray(v.orders)||!Array.isArray(v.accessoryPurchases))return empty();return {version:1,orders:v.orders.filter(validOrder),accessoryPurchases:v.accessoryPurchases.filter(validPurchase),supplierInvoices:Array.isArray(v.supplierInvoices)?v.supplierInvoices.filter(validInvoice):[],expenses:Array.isArray(v.expenses)?v.expenses.filter(validExpense):[]};}catch{return empty();}
 }
 export function readWorkshopStore():WorkshopStore{if(typeof window==="undefined")return empty();try{return decodeWorkshopStore(window.localStorage.getItem(WORKSHOP_STORAGE_KEY));}catch{return empty();}}
-export function writeWorkshopStore(store:WorkshopStore):boolean{if(typeof window==="undefined")return false;try{const safe:WorkshopStore={version:1,orders:store.orders.filter(validOrder),accessoryPurchases:store.accessoryPurchases.filter(validPurchase),supplierInvoices:(store.supplierInvoices||[]).filter(validInvoice)};window.localStorage.setItem(WORKSHOP_STORAGE_KEY,JSON.stringify(safe));return true;}catch{return false;}}
+export function writeWorkshopStore(store:WorkshopStore):boolean{if(typeof window==="undefined")return false;try{const safe:WorkshopStore={version:1,orders:store.orders.filter(validOrder),accessoryPurchases:store.accessoryPurchases.filter(validPurchase),supplierInvoices:(store.supplierInvoices||[]).filter(validInvoice),expenses:(store.expenses||[]).filter(validExpense)};window.localStorage.setItem(WORKSHOP_STORAGE_KEY,JSON.stringify(safe));return true;}catch{return false;}}
