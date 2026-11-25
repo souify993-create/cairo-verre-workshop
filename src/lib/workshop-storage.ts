@@ -19,8 +19,8 @@ const methods: PaymentMethod[] = ["Espèces", "Virement", "Chèque"];
 function validOrder(v: unknown): v is StoredOrder {
  if (!isRecord(v)||!text(v.id)||!text(v.number)||!text(v.customer)||!["draft","delivered","cancelled"].includes(String(v.status))||!amount(v.totalTTC)||!text(v.createdAt)||!text(v.updatedAt)||!Array.isArray(v.accessories)||!Array.isArray(v.payments)||!Array.isArray(v.refunds)||!isRecord(v.lines)||!Array.isArray(v.lines.glass)||!Array.isArray(v.lines.services)||!Array.isArray(v.lines.accessories)) return false;
  const uses=v.accessories.every(x=>isRecord(x)&&text(x.accessoryId)&&text(x.label)&&amount(x.quantity));
- const payments=v.payments.every(x=>isRecord(x)&&text(x.id)&&methods.includes(x.method as PaymentMethod)&&amount(x.amount)&&["pending","confirmed","cancelled"].includes(String(x.status)));
- const refunds=v.refunds.every(x=>isRecord(x)&&text(x.id)&&methods.includes(x.method as PaymentMethod)&&amount(x.amount)&&["pending","confirmed"].includes(String(x.status)));
+ const payments=v.payments.every(x=>isRecord(x)&&text(x.id)&&methods.includes(x.method as PaymentMethod)&&amount(x.amount)&&["pending","confirmed","cancelled"].includes(String(x.status))&&(x.date===undefined||text(x.date)));
+ const refunds=v.refunds.every(x=>isRecord(x)&&text(x.id)&&methods.includes(x.method as PaymentMethod)&&amount(x.amount)&&["pending","confirmed"].includes(String(x.status))&&(x.date===undefined||text(x.date)));
  const glass=v.lines.glass.every(x=>isRecord(x)&&text(x.label)&&amount(x.widthMm)&&amount(x.heightMm)&&amount(x.quantity)&&amount(x.pricePerM2));
  const services=v.lines.services.every(x=>isRecord(x)&&text(x.name)&&["ml","m²"].includes(String(x.unit))&&amount(x.quantity)&&amount(x.unitPrice));
  const accessories=v.lines.accessories.every(x=>isRecord(x)&&text(x.label)&&amount(x.quantity)&&amount(x.unitPrice));
