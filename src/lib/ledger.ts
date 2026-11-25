@@ -1,7 +1,7 @@
 export type PaymentMethod = "Espèces" | "Virement" | "Chèque" | "Effet";
 export type OrderStatus = "draft" | "delivered" | "cancelled";
 export type AccessoryUse = { accessoryId: string; label: string; quantity: number };
-export type Payment = { id: string; method: PaymentMethod; amount: number; status: "pending" | "confirmed" | "cancelled"; date?: string };
+export type Payment = { id: string; method: PaymentMethod; amount: number; status: "pending" | "confirmed" | "cancelled"; date?: string; dueDate?: string; reference?: string };
 export type Refund = { id: string; method: PaymentMethod; amount: number; status: "pending" | "confirmed"; date?: string };
 export type CustomerAvoir = { id: string; amount: number; date: string; status: "pending" | "settled" };
 export type WorkshopOrder = {
@@ -31,7 +31,7 @@ const positive = (n: number) => Number.isFinite(n) ? Math.max(0, n) : 0;
  * Drafts never affect stock, customer balances or the cash journal.
  * Re-running after an edit does not append duplicate movements.
  */
-export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurchase[], supplierInvoices: { id: string; supplier: string; invoiceNumber: string; paidAmount: number; paymentMethod: PaymentMethod | "Non réglé"; paidDate?: string; payments?: {id:string;date:string;amount:number;method:PaymentMethod;status?:"pending"|"confirmed"|"cancelled";reference?:string}[] }[] = []): LedgerSnapshot {
+export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurchase[], supplierInvoices: { id: string; supplier: string; invoiceNumber: string; paidAmount: number; paymentMethod: PaymentMethod | "Non réglé"; paidDate?: string; payments?: {id:string;date:string;amount:number;method:PaymentMethod;status?:"pending"|"confirmed"|"cancelled";reference?:string;dueDate?:string}[] }[] = []): LedgerSnapshot {
   const cashMovements: CashMovement[] = [];
   const customerMap = new Map<string, { total: number; paid: number; avoir: number }>();
   const stockMap = new Map<string, { label: string; purchased: number; consumed: number }>();
