@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {areaM2,quoteTotals,serviceUnit,LINEAR_SERVICES,isValidQuote,serviceQuantity} from "./calculations";
+import {areaM2,quoteTotals,serviceUnit,LINEAR_SERVICES,isValidQuote,serviceQuantity,serviceQuantityForGlassLines} from "./calculations";
 test("converts millimetres to square metres and applies quantity",()=>assert.equal(areaM2(1000,2000,2),4));
 test("recognizes all linear services and area services",()=>{
  assert.equal(LINEAR_SERVICES.length,12); for(const n of LINEAR_SERVICES)assert.equal(serviceUnit(n),"ml");
@@ -19,4 +19,12 @@ test("calculates TTC totals, HT and TVA",()=>{
 test("accepts accessory-only and service-only quotes",()=>{
  assert.equal(isValidQuote([],[],[{label:"Poignée",quantity:2,unitPrice:15}]),true);assert.equal(isValidQuote([],[],[]),false);
  assert.equal(isValidQuote([{label:"Verre",widthMm:0,heightMm:1000,quantity:1,pricePerM2:100}],[],[]),false);assert.equal(isValidQuote([],[{name:"VID 6",unit:"ml",quantity:1,unitPrice:20}],[]),true);
+});
+
+test("aggregates service quantities across several sizes within one glass group",()=>{
+ const lines=[{label:"CLAIR 4",widthMm:1200,heightMm:1500,quantity:5,pricePerM2:0,groupId:"clair"},{label:"CLAIR 4",widthMm:800,heightMm:800,quantity:10,pricePerM2:0,groupId:"clair"},{label:"CLAIR 4",widthMm:1500,heightMm:2100,quantity:12,pricePerM2:0,groupId:"clair"}];
+ assert.equal(serviceQuantityForGlassLines("SABLAGE",lines),5*1.2*1.5+10*.8*.8+12*1.5*2.1);
+ assert.equal(serviceQuantityForGlassLines("BP",lines),5*2*(1.2+1.5)+10*2*(.8+.8)+12*2*(1.5+2.1));
+ const trempe=[{label:"TREMPE 6",widthMm:900,heightMm:900,quantity:7,pricePerM2:0,groupId:"trempe"},{label:"TREMPE 6",widthMm:1200,heightMm:1300,quantity:10,pricePerM2:0,groupId:"trempe"}];
+ assert.equal(serviceQuantityForGlassLines("SABLAGE",trempe),7*.9*.9+10*1.2*1.3);
 });
