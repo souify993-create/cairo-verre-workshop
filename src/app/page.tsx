@@ -222,10 +222,11 @@ export default function Home(){
  };
  const updateCustomerRecord=async(updated:CustomerRecord)=>{
   const old=(workshop.customers||[]).find(x=>x.id===updated.id);
-  const oldName=old?.name||updated.name;
+  const oldName=old?.name||(updated.id.startsWith("legacy:")?updated.id.slice(7):updated.name);
   if((workshop.customers||[]).some(x=>x.id!==updated.id&&customerKey(x.name)===customerKey(updated.name))){alert("Un client porte déjà ce nom.");return false;}
   if(customerNames.some(name=>customerKey(name)===customerKey(updated.name)&&customerKey(name)!==customerKey(oldName))){alert("Un client porte déjà ce nom.");return false;}
-  const savedRecord={...updated,id:updated.id.startsWith("legacy:")?crypto.randomUUID():updated.id};\n  const customers=[...(workshop.customers||[]).filter(x=>x.id!==updated.id),savedRecord];
+  const savedRecord={...updated,id:updated.id.startsWith("legacy:")?crypto.randomUUID():updated.id};
+  const customers=[...(workshop.customers||[]).filter(x=>x.id!==updated.id),savedRecord];
   const orders=workshop.orders.map(o=>customerKey(o.customer)===customerKey(oldName)?{...o,customer:updated.name}:o);
   const nextDrafts=drafts.map(d=>customerKey(d.customer)===customerKey(oldName)?{...d,customer:updated.name}:d);
   return persistCloudState({...workshop,customers,orders},nextDrafts);
