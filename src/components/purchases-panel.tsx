@@ -6,7 +6,7 @@ const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency
 const today=()=>{const d=new Date();return [d.getFullYear(),String(d.getMonth()+1).padStart(2,"0"),String(d.getDate()).padStart(2,"0")].join("-");};
 const blankLine=():PurchaseLine=>({label:"",quantity:1,unitPrice:0});
 
-export function PurchasesPanel({invoices,onAdd,onUpdate}:{invoices:SupplierInvoice[];onAdd:(invoice:SupplierInvoice)=>void;onUpdate:(invoice:SupplierInvoice)=>void}){
+export function PurchasesPanel({invoices,onAdd,onUpdate,glassCatalog,accessoryCatalog}:{invoices:SupplierInvoice[];onAdd:(invoice:SupplierInvoice)=>void;onUpdate:(invoice:SupplierInvoice)=>void;glassCatalog:readonly string[];accessoryCatalog:readonly string[]}){
  const [supplier,setSupplier]=useState("");
  const [invoiceNumber,setInvoiceNumber]=useState("");
  const [date,setDate]=useState(today());
@@ -32,6 +32,7 @@ export function PurchasesPanel({invoices,onAdd,onUpdate}:{invoices:SupplierInvoi
   onAdd(invoice);setInvoiceNumber("");setLines([blankLine()]);setTotalHT(0);setTotalTVA(0);setTotalTTC(0);setPaidAmount(0);setMethod("Non réglé");setChequeNumber("");setChequeDate("");
  };
  return <div className="content">
+  <datalist id="purchase-glass-catalog">{glassCatalog.map(name=><option key={name} value={name}/>)}</datalist><datalist id="purchase-accessory-catalog">{accessoryCatalog.map(name=><option key={name} value={name}/>)}</datalist>
   <div className="intro"><div><h2>Achats & fournisseurs</h2><p>Les montants HT, TVA et TTC sont repris exactement de la facture fournisseur.</p></div><span className="draft-count">{invoices.length} facture(s)</span></div>
   <section className="panel"><div className="panel-heading"><div><h3>Enregistrer une facture fournisseur</h3><p>Ajoutez toutes les lignes de la facture. Les totaux restent saisis manuellement.</p></div></div>
    <div className="form-grid" style={{gridTemplateColumns:"repeat(2,minmax(0,1fr))"}}>
@@ -44,7 +45,7 @@ export function PurchasesPanel({invoices,onAdd,onUpdate}:{invoices:SupplierInvoi
    {lines.map((line,i)=><div key={i} className="panel" style={{padding:12,marginBottom:10,border:"1px solid #e7ecee"}}>
     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}><strong>Ligne {i+1}</strong><button className="icon-btn danger" type="button" disabled={lines.length===1} onClick={()=>setLines(v=>v.filter((_,n)=>n!==i))} aria-label={"Supprimer la ligne "+(i+1)}>×</button></div>
     <div className="form-grid" style={{gridTemplateColumns:"repeat(2,minmax(0,1fr))"}}>
-     <label className="field"><span>Désignation</span><input className="text-input" value={line.label} onChange={e=>updateLine(i,{label:e.target.value})} placeholder={category==="glass"?"Type de verre":"Nom de l'accessoire"}/></label>
+     <label className="field"><span>Désignation</span><input className="text-input" list={category==="glass"?"purchase-glass-catalog":"purchase-accessory-catalog"} value={line.label} onChange={e=>updateLine(i,{label:e.target.value})} placeholder={category==="glass"?"Rechercher un type de verre":"Rechercher un accessoire"}/></label>
      <label className="field"><span>Quantité</span><input className="text-input" type="number" min="0" step="any" value={line.quantity} onChange={e=>updateLine(i,{quantity:Number(e.target.value)})}/></label>
      {category==="glass"&&<><label className="field"><span>Largeur (mm)</span><input className="text-input" type="number" min="0" value={line.widthMm??0} onChange={e=>updateLine(i,{widthMm:Number(e.target.value)})}/></label><label className="field"><span>Hauteur (mm)</span><input className="text-input" type="number" min="0" value={line.heightMm??0} onChange={e=>updateLine(i,{heightMm:Number(e.target.value)})}/></label></>}
      <label className="field"><span>Prix unitaire facture</span><input className="text-input" type="number" min="0" step="any" value={line.unitPrice} onChange={e=>updateLine(i,{unitPrice:Number(e.target.value)})}/></label>
