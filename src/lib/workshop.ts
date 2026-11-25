@@ -115,3 +115,23 @@ export function addRefund(order: StoredOrder, refund: Refund, now = new Date().t
   }
   return { ...order, refunds: [...order.refunds, { ...refund, date: refund.date ?? now.slice(0, 10) }], updatedAt: now };
 }
+
+export function confirmRefund(order: StoredOrder, refundId: string, now = new Date().toISOString()): StoredOrder {
+  const refund = order.refunds.find(item => item.id === refundId);
+  if (!refund) throw new Error("Remboursement introuvable.");
+  if (refund.status === "confirmed") throw new Error("Ce remboursement est déjà confirmé.");
+  const collected = order.payments.filter(payment => payment.status === "confirmed")
+    .reduce((sum, payment) => sum + payment.amount, 0);
+  const alreadyRefunded = order.refunds.filter(item => item.status === "confirmed")
+    .reduce((sum, item) => sum + item.amount, 0);
+  if (alreadyRefunded + refund.amount > collected) {
+    throw new Error("Le remboursement dépasse le montant réellement encaissé pour cette commande.");
+  }
+  return {
+    ...order,
+    refunds: order.refunds.map(item => item.id === refundId
+      ? { ...item, status: "confirmed" as const, date: now.slice(0, 10) }
+      : item),
+    updatedAt: now,
+  };
+}
