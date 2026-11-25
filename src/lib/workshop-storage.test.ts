@@ -48,7 +48,8 @@ test("supplier invoices are retained and glass invoices do not imply accessory s
 
 test("older local stores remain readable without supplier invoice data", () => {
   const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [] }));
-  assert.deepEqual(decoded.supplierInvoices, []);\n  assert.deepEqual(decoded.expenses, []);
+  assert.deepEqual(decoded.supplierInvoices, []);
+  assert.deepEqual(decoded.expenses, []);
 });
 
 
