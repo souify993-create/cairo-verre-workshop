@@ -227,4 +227,4 @@ export const GLASS_CATALOG = [
   "DV (STADIP 44*²+VID8+TREMPE 8)"
 ] as const;
 
-export const catalogKey = (label: string) => label.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "accessoire-sans-nom";
+export const catalogKey = (label: string) => label.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "accessoire-sans-nom";
