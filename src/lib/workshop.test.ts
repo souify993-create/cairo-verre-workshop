@@ -110,3 +110,59 @@ test("only pending cheque refunds can be confirmed", () => {
   order = addRefund(order, { id: "cash-refund-only", method: "Espèces", amount: 20, status: "pending" });
   assert.throws(() => confirmRefund(order, "cash-refund-only"));
 });
+
+
+test("delivered cash order price decrease records only the difference as a cash refund", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cash-full", method: "Espèces", amount: 250, status: "confirmed" });
+  const revised = reviseDeliveredOrder(order, { totalTTC: 200, lines: order.lines }, "Espèces");
+  assert.equal(revised.totalTTC, 200);
+  assert.equal(revised.refunds.reduce((sum, refund) => sum + (refund.status === "confirmed" ? refund.amount : 0), 0), 50);
+  const ledger = deriveLedger([revised], []);
+  assert.equal(ledger.customers[0].paid, 200);
+  assert.equal(ledger.customers[0].credit, 0);
+  assert.equal(ledger.cashMovements.filter(m => m.direction === "Sortie").reduce((sum,m)=>sum+m.amount,0), 50);
+});
+
+test("delivered cheque order price decrease keeps cheque and leaves the difference as customer credit (Avoir)", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cheque-full", method: "Chèque", amount: 250, status: "pending" });
+  order = confirmPayment(order, "cheque-full");
+  const revised = reviseDeliveredOrder(order, { totalTTC: 200, lines: order.lines }, "Chèque");
+  assert.deepEqual(revised.payments, order.payments);
+  const balance = deriveLedger([revised], []).customers[0];
+  assert.equal(balance.credit, 50);
+  assert.equal(balance.remaining, 0);
+});
+
+test("delivered cheque order price increase keeps cheque and leaves the difference due", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "cheque-part", method: "Chèque", amount: 200, status: "pending" });
+  order = confirmPayment(order, "cheque-part");
+  const revised = reviseDeliveredOrder(order, { totalTTC: 300, lines: order.lines }, "Chèque");
+  assert.deepEqual(revised.payments, order.payments);
+  const balance = deriveLedger([revised], []).customers[0];
+  assert.equal(balance.remaining, 100);
+  assert.equal(balance.credit, 0);
+});
+
+test("changing payment method cancels the original payment and records the replacement method", () => {
+  let order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  order = addPayment(order, { id: "old-cheque", method: "Chèque", amount: 250, status: "pending" });
+  const revised = reviseDeliveredOrder(order, { totalTTC: 250, lines: order.lines }, "Espèces");
+  assert.equal(revised.payments.find(payment => payment.id === "old-cheque")?.status, "cancelled");
+  assert.equal(revised.payments.filter(payment => payment.status === "confirmed").length, 1);
+  assert.equal(revised.payments.find(payment => payment.status === "confirmed")?.method, "Espèces");
+  assert.equal(deriveLedger([revised], []).cashMovements[0].method, "Espèces");
+});
+
+test("editing delivered accessory quantities automatically changes consumed stock", () => {
+  const order = markOrderDelivered(orderFromDraft(draft), "Client B");
+  const revised = reviseDeliveredOrder(order, {
+    totalTTC: 225,
+    lines: { ...order.lines, accessories: [{ label: "Poignée", quantity: 1, unitPrice: 25 }] },
+  });
+  const ledger = deriveLedger([revised], [{ accessoryId: "poignee", label: "Poignée", quantity: 5 }]);
+  assert.equal(ledger.stock[0].consumed, 1);
+  assert.equal(ledger.stock[0].available, 4);
+});
