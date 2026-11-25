@@ -111,3 +111,12 @@ test("integrated order, cheque, refund, stock and supplier settlement flow stays
  assert.equal(first.cashMovements.reduce((sum,m)=>sum+(m.direction==="Entrée"?m.amount:-m.amount),0),125);
  assert.deepEqual(second,first);
 });
+
+test("an initial supplier cheque is not a cash outflow until its payment record is confirmed",()=>{
+ const pending=deriveLedger([],[],[{id:"initial-cheque",supplier:"Fournisseur",invoiceNumber:"F-INIT",paidAmount:0,paymentMethod:"Chèque",payments:[{id:"initial-cheque-payment",date:"2026-11-25",amount:450,method:"Chèque",status:"pending"}]}]);
+ assert.equal(pending.cashMovements.length,0);
+ const collected=deriveLedger([],[],[{id:"initial-cheque",supplier:"Fournisseur",invoiceNumber:"F-INIT",paidAmount:0,paymentMethod:"Chèque",payments:[{id:"initial-cheque-payment",date:"2026-11-27",amount:450,method:"Chèque",status:"confirmed"}]}]);
+ assert.equal(collected.cashMovements.length,1);
+ assert.equal(collected.cashMovements[0].amount,450);
+ assert.equal(collected.cashMovements[0].date,"2026-11-27");
+});
