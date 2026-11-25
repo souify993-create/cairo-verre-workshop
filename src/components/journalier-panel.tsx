@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import type { CashMovement, PaymentMethod } from "@/lib/ledger";
-import { deriveExpenseMovements, type ExpenseRecord } from "@/lib/operations";\nimport { derivePayrollMovements, type Employee, type PayrollWeek } from "@/lib/payroll";
+import { deriveExpenseMovements, type ExpenseRecord } from "@/lib/operations";
+import { derivePayrollMovements, type Employee, type PayrollWeek } from "@/lib/payroll";
 
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 const methods:PaymentMethod[]=["Espèces","Virement","Chèque"];
