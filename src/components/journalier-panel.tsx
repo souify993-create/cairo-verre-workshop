@@ -4,7 +4,7 @@ import type { CashMovement, PaymentMethod } from "@/lib/ledger";
 
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 const methods:PaymentMethod[]=["Espèces","Virement","Chèque"];
-const today=()=>new Date().toLocaleDateString("en-CA");
+const today=()=>{const now=new Date();return [now.getFullYear(),String(now.getMonth()+1).padStart(2,"0"),String(now.getDate()).padStart(2,"0")].join("-");};
 
 export function JournalierPanel({movements}:{movements:CashMovement[]}){
  const [date,setDate]=useState(today);
