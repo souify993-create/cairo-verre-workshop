@@ -2,6 +2,13 @@
 
 Run these checks in a clean browser profile or after making a backup of the local data. Use test-only names and amounts; do not enter real customer or supplier records during QA.
 
+## 0. Administrator access
+- [ ] Sign in with an invited admin email and password.
+- [ ] Confirm a non-admin authenticated user is rejected.
+- [ ] Reload the app and confirm the admin session persists.
+- [ ] Sign out and confirm the workspace is no longer accessible.
+- [ ] Confirm no service-role or secret key is present in browser bundles.
+
 ## 1. Quote and draft lifecycle
 - [ ] Create an accessory-only quote (no glass and no services), save it, reload the page, and confirm it remains editable.
 - [ ] Reopen the same draft and change its quantity/price. Save and confirm the same draft is updated rather than duplicated.
@@ -42,7 +49,8 @@ Use a delivered test order of 200 MAD.
 ## 5. Persistence and repeatability
 - [ ] Reload after each major operation and verify the records persist.
 - [ ] Repeat the same ledger view/reload several times. Totals and movement counts must remain unchanged; derived movements must not accumulate duplicates.
-- [ ] Test on a second browser/device only after a backup; current data is browser-local and is not yet synchronized between devices.
+- [ ] Test on a second browser/device only after cloud synchronization is completed; until then current data is browser-local and is not synchronized between devices.
+- [ ] After cloud sync is integrated, sign in on two devices and verify updates are shared and stale revision writes are rejected without overwriting newer data.
 
 ## Cloudflare Workers preview checks
 
