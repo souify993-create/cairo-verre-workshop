@@ -2,7 +2,7 @@
 import { useState } from "react";
 import type { ExpenseCategory, ExpenseFrequency, ExpenseRecord } from "@/lib/operations";
 import type { PaymentMethod } from "@/lib/ledger";
-const categories:ExpenseCategory[]=["Loyer","Eau","Électricité","Maintenance","Carburant","Avance","Salaire","Autres"];
+const categories:ExpenseCategory[]=["Loyer","Eau","Électricité","Maintenance","Carburant","Autres"];
 const frequencies:ExpenseFrequency[]=["Jour","Semaine","Mois","Année"];
 const methods:PaymentMethod[]=["Espèces","Virement","Chèque"];
 const divisor:Record<ExpenseFrequency,number>={Jour:1,Semaine:6,Mois:30,Année:365};
