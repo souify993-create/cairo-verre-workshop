@@ -23,7 +23,7 @@ export function CaissePaymentPanel({ orders, onRecordPayment }: {
   const [reference, setReference] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
-  const customerOrders = eligible.filter(o => o.customer.trim() === customer);
+  const customerOrders = eligible.filter(o => o.customer.trim().toLocaleLowerCase("fr") === customer.trim().toLocaleLowerCase("fr"));
   const selectedOrder = customerOrders.find(o => o.id === orderId) || customerOrders[0];
   const remaining = selectedOrder ? remainingFor(selectedOrder) : 0;
   const parsed = Number(amount);
