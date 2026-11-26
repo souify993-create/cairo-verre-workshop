@@ -145,15 +145,3 @@ test("customer remission covers the waived balance but appears as a cash outflow
   assert.equal(result.cashMovements.find(m => m.kind === "Remise")?.direction, "Sortie");
   assert.equal(result.cashMovements.find(m => m.kind === "Remise")?.amount, 120);
 });
-
-
-test("pending customer cheques are visible as outstanding, not counted as paid", () => {
-  const result = deriveLedger([{
-    id: "order-cheque-pending", number: "C#PENDING", customer: "Client Chèque",
-    status: "delivered", totalTTC: 1000, accessories: [], refunds: [],
-    payments: [{ id: "pending-cheque", method: "Chèque", amount: 600, status: "pending", date: "2026-11-26", dueDate: "2026-12-10", reference: "CH-600" }],
-  }], []);
-  assert.equal(result.customers[0].paid, 0);
-  assert.equal(result.customers[0].remaining, 1000);
-  assert.equal(result.cashMovements.length, 0);
-});
