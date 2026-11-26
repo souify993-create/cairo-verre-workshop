@@ -14,6 +14,6 @@
   "theme_color": "#17324f",
   "categories": ["business", "productivity"],
   "icons": [
-    { "src": "/pwa-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "/pwa-icon.svg", "sizes": "192x192 512x512", "type": "image/svg+xml", "purpose": "any" }
   ]
 }
