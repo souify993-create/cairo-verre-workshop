@@ -39,6 +39,7 @@ export function AdminLogin({ onAuthenticated }: { onAuthenticated: () => void })
       const { data, error: signupError } = await createSupabaseBrowserClient().auth.signUp({
         email: normalizedEmail,
         password,
+        options: { emailRedirectTo: window.location.origin },
       });
       if (signupError) {
         setError(signupError.message);
