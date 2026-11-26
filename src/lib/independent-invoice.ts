@@ -28,17 +28,18 @@ export function allocateIndependentInvoiceTotal(
   });
   const totalWeight = weights.reduce((sum, value) => sum + value, 0);
   if (!(totalWeight > 0)) throw new Error("Impossible de répartir le montant sur des surfaces nulles.");
-  let allocatedCents = 0;
-  return lines.map((line, index) => {
-    const cents = index === lines.length - 1
-      ? Math.round(totalTTC * 100) - allocatedCents
-      : Math.round((Math.round(totalTTC * 100) * weights[index] / totalWeight));
-    allocatedCents += cents;
-    return { ...line, weight: weights[index], amount: cents / 100 };
-  });
+  const totalCents = Math.round(totalTTC * 100);
+  const exactShares = weights.map(weight => totalCents * weight / totalWeight);
+  const cents = exactShares.map(Math.floor);
+  let remainder = totalCents - cents.reduce((sum, value) => sum + value, 0);
+  const largestRemainders = exactShares
+    .map((share, index) => ({ index, fraction: share - cents[index] }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  for (let i = 0; i < remainder; i++) cents[largestRemainders[i].index]++;
+  return lines.map((line, index) => ({ ...line, weight: weights[index], amount: cents[index] / 100 }));
 }
 
 export function independentInvoiceNumber(date = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `FI-${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  return `FI-${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${String(date.getMilliseconds()).padStart(3, "0")}`;
 }
