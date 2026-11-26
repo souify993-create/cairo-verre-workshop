@@ -65,8 +65,8 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       if (payment.status === "cancelled") continue;
       const amount = positive(payment.amount);
       if (!amount) continue;
-      if (payment.status === "pending" || (!payment.status && (payment.method === "Chèque" || payment.method === "Effet"))) continue;
       if (customer) customerMap.get(customer)!.paid += amount;
+      if (payment.status === "pending" || (!payment.status && (payment.method === "Chèque" || payment.method === "Effet"))) continue;
       if (payment.method === "Remise") {
         cashMovements.push({ orderId: order.id, reference: order.number, method: payment.method, direction: "Sortie", amount, kind: "Remise", counterparty: order.customer, ...(payment.date ? { date: payment.date } : {}) });
       } else {
