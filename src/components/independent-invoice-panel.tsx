@@ -12,6 +12,11 @@ const fmt = (n: number) => (n / 1000).toLocaleString("fr-FR", { minimumFractionD
 export function IndependentInvoicePanel() {
   const [customer, setCustomer] = useState({ name: "", phone: "", address: "", ice: "", taxId: "" });
   const [total, setTotal] = useState("");
+  const [invoiceNumber] = useState(() => independentInvoiceNumber());
+  const [invoiceDate, setInvoiceDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  });
   const [lines, setLines] = useState<Line[]>([{ id: "line-1", label: "", widthMm: 0, heightMm: 0, quantity: 1 }]);
   const [error, setError] = useState("");
   const rows = useMemo(() => {
@@ -30,8 +35,9 @@ export function IndependentInvoicePanel() {
     catch (e) { setError(e instanceof Error ? e.message : "Vérifiez les lignes de vitrage."); return; }
     const win = window.open("", "_blank", "width=900,height=700");
     if (!win) { setError("Autorisez les fenêtres contextuelles pour imprimer la facture."); return; }
-    const number = independentInvoiceNumber();
-    const date = new Date().toLocaleDateString("fr-FR");
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(invoiceDate) || Number.isNaN(new Date(`${invoiceDate}T00:00:00`).getTime())) { setError("Choisissez une date de facture valide."); return; }
+    const number = invoiceNumber;
+    const date = new Date(`${invoiceDate}T00:00:00`).toLocaleDateString("fr-FR");
     const totalTTC = Math.round(Number(total) * 100) / 100;
     const totalHT = totalTTC / 1.2;
     const lineHtml = allocatedRows.map(row => {
@@ -79,6 +85,12 @@ export function IndependentInvoicePanel() {
         <label className="field"><span>Adresse</span><input value={customer.address} onChange={e=>setCustomer(v=>({...v,address:e.target.value}))}/></label>
         <label className="field"><span>ICE</span><input value={customer.ice} onChange={e=>setCustomer(v=>({...v,ice:e.target.value}))}/></label>
         <label className="field"><span>IF</span><input value={customer.taxId} onChange={e=>setCustomer(v=>({...v,taxId:e.target.value}))}/></label>
+      </div>
+    </section>
+    <section className="panel"><div className="panel-heading"><div><h3>Référence et date de facture</h3><p>Le numéro court est généré automatiquement ; la date peut être modifiée avant impression.</p></div></div>
+      <div className="independent-invoice-grid">
+        <label className="field"><span>Numéro de facture</span><input value={invoiceNumber} readOnly/></label>
+        <label className="field"><span>Date de facture *</span><input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)}/></label>
       </div>
     </section>
     <section className="panel"><div className="panel-heading"><div><h3>Vitrages et dimensions</h3><p>Les dimensions sont saisies en millimètres.</p></div><button className="add-btn" onClick={addLine}>+ Ajouter une ligne</button></div>
