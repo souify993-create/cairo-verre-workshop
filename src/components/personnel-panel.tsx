@@ -24,7 +24,7 @@ export function PersonnelPanel({employees,weeks,onChange}:{employees:Employee[];
  const totalHours=weeklyTotals.reduce((s,h)=>s+h,0);
  const selected=employees.find(e=>e.id===selectedId)||null;
  const selectedWeek=selected?weekFor(selected.id):undefined;
- const selectedCurrent:PayrollWeek|undefined=selected?selectedWeek||{id:"",employeeId:selected.id,weekStart,attendance:dates.map(date=>({date,hours:0})),advances:[],salaryPayments:[]}:undefined;
+ const selectedCurrent:PayrollWeek|undefined=selected?{...(selectedWeek||{id:"",employeeId:selected.id,weekStart,attendance:[],advances:[],salaryPayments:[]}),weekStart,attendance:dates.map((date,i)=>({date,hours:dayIsSunday(date)?0:(hoursFor(selected.id)[i]||0)}))}:undefined;
  const selectedSummary=selected&&selectedCurrent?summarizePayroll(selectedCurrent,selected,weeks):null;
  const profileStats=useMemo(()=>{if(!selected)return {worked:0,absent:0};const days=new Map<string,number>();for(const w of employeeWeeks(selected.id))for(const d of w.attendance)if(!dayIsSunday(d.date))days.set(d.date,Math.max(days.get(d.date)??-1,d.hours));return {worked:[...days.values()].filter(h=>h>0).length,absent:[...days.values()].filter(h=>h===0).length};},[selected,weeks]);
  const addEmployee=()=>{if(!name.trim()||salary<=0)return;const e:Employee={id:crypto.randomUUID(),name:name.trim(),phone:phone.trim(),weeklySalary:salary,active:true};onChange([...employees,e],weeks);setName("");setPhone("");setSalary(0);};
