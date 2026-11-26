@@ -1,73 +1,56 @@
-# Cairo Verre — Manual QA checklist
+# Cairo Verre — Release QA checklist
 
-Run these checks in a clean browser profile or after making a backup of the local data. Use test-only names and amounts; do not enter real customer or supplier records during QA.
+Run business-operation tests with test-only records. Do not create fake movements in the live company ledger. For UI tests that would create or delete orders, use a separate test project/environment or first obtain a verified backup and agree on an isolated test procedure.
 
-## 0. Administrator access
-- [ ] Sign in with an invited admin email and password.
-- [ ] Confirm a non-admin authenticated user is rejected.
-- [ ] Reload the app and confirm the admin session persists.
-- [ ] Sign out and confirm the workspace is no longer accessible.
-- [ ] Confirm no service-role or secret key is present in browser bundles.
+## 1. Accounts and access
 
-## 1. Quote and draft lifecycle
-- [ ] Create an accessory-only quote (no glass and no services), save it, reload the page, and confirm it remains editable.
-- [ ] Reopen the same draft and change its quantity/price. Save and confirm the same draft is updated rather than duplicated.
-- [ ] Print Devis, BP, BL and Facture from the draft. Confirm printing does not deliver the order, change stock, or create a cash movement.
-- [ ] Use `+ Nouveau` and confirm the next quote starts empty without changing the saved draft.
-- [ ] Deliver a draft with a customer name. Confirm the draft disappears from the draft list and one delivered order appears.
-- [ ] Try delivery without a customer name; it must be rejected.
+- [x] Two allowlisted administrator accounts activated and email-confirmed.
+- [x] Both accounts carry the server-managed `admin` role and `cairo-verre` application claim.
+- [x] User-confirmed that the existing workshop data appears after signing in with either account.
+- [ ] Verify session persistence after closing and reopening the browser.
+- [ ] Verify sign-out blocks access to the workspace.
+- [ ] Verify a non-allowlisted account cannot activate or enter the app.
 
-## 2. Customer payment, cheque and refund
-Use a delivered test order of 200 MAD.
-- [ ] Add 100 MAD cash: customer paid = 100 MAD and cash entry = 100 MAD.
-- [ ] Add a 100 MAD cheque: it remains pending and does not increase paid balance or cash.
-- [ ] Confirm cheque encashment: paid balance becomes 200 MAD and the cash entry is dated on confirmation.
-- [ ] Add a 25 MAD cash refund: cash outflow = 25 MAD and net customer paid = 175 MAD.
-- [ ] Add a cheque refund. Even if a caller supplies a confirmed status, the application must keep it pending; it must not create a cash outflow.
-- [ ] Attempt to confirm a cheque refund larger than the remaining confirmed receipts; confirmation must be rejected.
-- [ ] Add enough confirmed receipt to cover the refund, confirm encashment, and verify the refund appears as a dated cash outflow.
-- [ ] Cancel a delivered test order. It must stop consuming stock and stop counting as sales, while confirmed historical receipts remain visible until separately refunded.
+## 2. Shared data and concurrency
 
-## 3. Accessory stock and supplier invoice
-- [ ] Record an accessory supplier invoice with at least two different lines. Confirm each line adds its own quantity to the corresponding stock item.
-- [ ] Record the invoice as unpaid. It must not create a cash outflow.
-- [ ] Record an initial supplier cheque at invoice entry. It must appear as pending, leave the paid balance unchanged, and create no cash outflow.
-- [ ] Confirm that initial cheque only after actual encashment; the confirmation date must become its cash-outflow date.
-- [ ] Add a partial cash or bank-transfer settlement. Paid balance and cash outflow must increase by exactly the settled amount.
-- [ ] Add a supplier cheque. It must remain pending and must not increase paid balance or cash outflow.
-- [ ] Confirm cheque encashment with the actual date. Paid balance and cash outflow must then include it exactly once.
-- [ ] If a supplier cheque is not encashed, cancel the pending cheque. It must stop reserving the invoice balance, remain marked cancelled, and never create a cash outflow.
-- [ ] Confirm the supplier balance is total TTC minus confirmed settlements, and stock quantities do not change when paying an invoice.
+- [x] Shared Supabase state exists and contains the existing workshop payload.
+- [x] The application loads the cloud snapshot after admin sign-in.
+- [x] The app uses revision-checked writes to reject stale concurrent updates.
+- [ ] On two separate devices/browsers, create a harmless isolated test change and confirm it appears on the other session.
+- [ ] Confirm a stale session receives a conflict message and cannot overwrite a newer snapshot.
 
-## 4. Daily journal, cash and payroll separation
-- [ ] Record a recurring monthly expense of 3,000 MAD active on the selected date. Journalier should allocate 100 MAD for that day; La caisse must not treat this allocation as an actual payment.
-- [ ] Create a test employee with weekly salary 1,200 MAD and record 54 hours across six days. Journalier salary cost should total 1,200 MAD for the week.
-- [ ] Record a 200 MAD advance. Journalier must count the advance as part of the 1,200 MAD weekly salary cost, not add it twice.
-- [ ] Confirm La caisse shows the actual 200 MAD advance and actual salary settlements only, not the daily allocated salary-cost rows.
-- [ ] Verify no recurring expense or payroll row is duplicated after reload.
+## 3. Quote and documents
 
-## 5. Persistence and repeatability
-- [ ] Reload after each major operation and verify the records persist.
-- [ ] Repeat the same ledger view/reload several times. Totals and movement counts must remain unchanged; derived movements must not accumulate duplicates.
-- [ ] Test on a second browser/device only after cloud synchronization is completed; until then current data is browser-local and is not synchronized between devices.
-- [ ] After cloud sync is integrated, sign in on two devices and verify updates are shared and stale revision writes are rejected without overwriting newer data.
+- [ ] Create an accessory-only draft in a test environment, reload, reopen and edit it.
+- [ ] Validate glass area calculations with the internal 20 mm allowance while printed dimensions remain the original entered millimetres converted to metres.
+- [ ] Validate linear and area service calculations, including grouped glass dimensions and service-only quotes.
+- [ ] Print Devis, BP, BL and Facture; confirm document layout, company identity, customer information and totals.
+- [ ] Confirm printing a draft does not deliver it or change stock/cash.
+- [ ] Deliver a test draft and confirm it becomes one order with the next shared `#C` number.
 
-## Cloudflare Workers preview checks
+## 4. Ledger, stock and payments
 
-- [ ] Build the Next.js app with the OpenNext Cloudflare adapter.
-- [ ] Run the local Workers preview and verify the home screen, navigation, quote calculator, draft persistence and print layouts.
-- [ ] Confirm the preview is served by the Cloudflare Workers runtime, not only the standard Next.js Node server.
-- [ ] Check that the Worker bundle is within the account plan size limit and that no real company data or secrets are included.
-- [ ] Only after all local preview checks pass, deploy the pilot to the dedicated `glass-management` Worker.
-- [ ] Verify the deployed `souify993.workers.dev` URL, then proceed to shared database and admin accounts as specified below.
+- [ ] Verify cash receipts and refunds affect the cash journal exactly once.
+- [ ] Verify pending cheques/effects do not count as confirmed receipts until encashed.
+- [ ] Verify cheque/effect reference and due date are mandatory.
+- [ ] Verify customer avoir creation and settlement follow the agreed rules.
+- [ ] Verify accessory consumption and supplier purchases update stock correctly.
+- [ ] Verify supplier invoices, partial settlements and pending supplier cheques.
+- [ ] Verify recurring expenses and payroll allocations are not duplicated in actual cash movements.
+- [ ] Verify employee attendance, advances and salary settlements.
 
-## Release and account sequence
+## 5. Backup
 
-1. Complete typecheck, automated tests, and production build successfully.
-2. Complete every manual QA item above in a preview/test environment using test-only records.
-3. Publish the verified pilot version without sign-in to Cloudflare Workers (`glass-management`), as requested.
-4. Run the same smoke tests on the published URL before treating the release as verified.
-5. Only after the published version is verified, implement persistent shared database storage and secure admin authentication, then create the two admin accounts.
-6. Re-run the full QA checklist after the database and authentication changes.
+- [ ] Click **Sauvegarde** in the top bar.
+- [ ] Confirm a JSON file downloads and contains orders, drafts, customers, purchases, supplier invoices, expenses, employees and payroll.
+- [ ] Store the file in a private off-device location.
+- [ ] Confirm the backup file is not shared publicly and is treated as confidential.
+- [ ] Document and test the restore procedure in an isolated environment before relying on it for disaster recovery.
 
-**Important data limitation:** the current application stores records in browser-local storage. A published URL does not make those records shared or backed up: each browser/device has its own data. Use only test data in the pilot. Do not rely on this version for the workshop's official live records until shared database persistence, backups, and the two admin accounts are implemented and verified.
+## 6. Release checks
+
+- [x] Latest main commit passed GitHub verification and Cloudflare deployment workflows.
+- [x] Live Worker URL was opened by the owner and login/PWA installation were observed.
+- [ ] Complete the remaining manual business-flow checks before declaring the app fully production-ready.
+- [ ] Enable leaked-password protection when supported by the Supabase plan.
+- [ ] Re-run Supabase security and performance advisors after any database changes.
