@@ -39,7 +39,7 @@ export function CaissePaymentPanel({ orders, onRecordPayment }: {
         <label className="field"><span>Commande</span><select className="text-input" value={selectedOrder?.id || ""} onChange={e => { setOrderId(e.target.value); setAmount(""); }} disabled={!customerOrders.length}>
           {customerOrders.map(o => <option key={o.id} value={o.id}>{o.number} · Reste {money(remainingFor(o))}</option>)}
         </select></label>
-        <label className="field"><span>Montant reçu (DH)</span><input className="text-input" type="number" min="0.01" max={remaining} step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex. 500"/></label>
+        <label className="field"><span>{method === "Remise" ? "Montant de la remise (DH)" : "Montant reçu (DH)"}</span><input className="text-input" type="number" min="0.01" max={remaining} step="0.01" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Ex. 500"/></label>
         <label className="field"><span>Mode de paiement</span><select className="text-input" value={method} onChange={e => setMethod(e.target.value as Method)}>
           <option>Espèces</option><option>Virement</option><option>Chèque</option><option>Effet</option><option>Remise</option>
         </select></label>
@@ -51,7 +51,7 @@ export function CaissePaymentPanel({ orders, onRecordPayment }: {
         setSaving(true);
         try { if (await onRecordPayment(selectedOrder, parsed, method, (method === "Chèque" || method === "Effet") ? { reference: reference.trim(), dueDate } : undefined)) { setAmount(""); setReference(""); setDueDate(""); } }
         finally { setSaving(false); }
-      }}>{saving ? "Enregistrement…" : "Enregistrer l'encaissement"}</button></div>
+      }}>{saving ? "Enregistrement…" : method === "Remise" ? "Enregistrer la remise" : "Enregistrer l'encaissement"}</button></div>
       {(method === "Chèque" || method === "Effet") && <p className="local-note">Le chèque ou l’effet sera enregistré dans le suivi, planifié au Journalier à sa date d’échéance et restera en attente jusqu’à sa régularisation.</p>}
       {method === "Remise" && <p className="local-note">Saisissez uniquement le montant que le propriétaire décide d’abandonner. Enregistrez d’abord le montant réellement reçu en espèces ou par virement, puis la remise : celle-ci sera comptabilisée comme une Sortie dans le journal de caisse.</p>}
     </>}
