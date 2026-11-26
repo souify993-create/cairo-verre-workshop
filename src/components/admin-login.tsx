@@ -45,7 +45,7 @@ export function AdminLogin({ onAuthenticated }: { onAuthenticated: () => void })
         setBusy(false);
         return;
       }
-      if (data.session && data.user?.app_metadata?.role === "admin") {
+      if (data.session && data.user?.app_metadata?.role === "admin" && data.user?.app_metadata?.application === "cairo-verre") {
         onAuthenticated();
       } else {
         setNotice("La demande de création du compte a été envoyée. Vérifiez votre boîte e-mail pour confirmer l’adresse, puis revenez vous connecter.");
@@ -99,7 +99,7 @@ export function AdminLogin({ onAuthenticated }: { onAuthenticated: () => void })
         <button type="button" onClick={() => { setMode(mode === "login" ? "signup" : "login"); setError(""); setNotice(""); }} style={{ width: "100%", marginTop: 12, border: "1px solid #d7e0e8", borderRadius: 9, padding: 12, color: "#1d3448", background: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
           {mode === "login" ? "Première connexion ? Activer mon compte" : "J’ai déjà un compte"}
         </button>
-        <p style={{ margin: "18px 0 0", color: "#8a98a6", fontSize: 12, textAlign: "center" }}>Accès privé · Connexion sécurisée · Session persistante</p>
+        <p style={{ margin: "18px 0 0", color: "#8a98a6", fontSize: 12, lineHeight: 1.55, textAlign: "center" }}>Accès privé · Connexion sécurisée · Session persistante</p><p style={{ margin: "10px 0 0", color: "#9a6b2f", background: "#fff8ed", padding: 10, borderRadius: 8, fontSize: 11, lineHeight: 1.5 }}>Important : la première connexion doit être effectuée sur le navigateur qui contient les données de test actuelles, afin de les transférer vers la base partagée.</p>
       </form>
     </main>
   );
