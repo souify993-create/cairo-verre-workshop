@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Calculator, ClipboardList, Users, Package, Wallet, FileText, Settings, Plus, Trash2, Save, CheckCircle2, Search, PanelLeftClose } from "lucide-react";
+import { Calculator, ClipboardList, Users, Package, Wallet, FileText, Settings, Plus, Trash2, Save, CheckCircle2, Search, PanelLeftClose, Download } from "lucide-react";
 import { AccessoryLine, GlassLine, LINEAR_SERVICES, AREA_SERVICES, ServiceLine, quoteTotals, areaM2, serviceUnit, serviceQuantity, serviceQuantityForGlassLines, isValidQuote } from "@/lib/calculations";
 import { decodeDraftStore, readDrafts, writeDrafts } from "@/lib/storage";
 import { addPayment, confirmRefund, markOrderDelivered, orderFromDraft, reviseDeliveredOrder, settleCustomerAvoir } from "@/lib/workshop";
@@ -23,6 +23,7 @@ import { AdminLogin } from "@/components/admin-login";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { ACCESSORY_CATALOG, GLASS_CATALOG, catalogKey } from "@/lib/catalog";
 import { loadCloudWorkshop, saveCloudWorkshop } from "@/lib/cloud-workshop";
+import { serializeWorkshopBackup } from "@/lib/backup";
 // Temporary workshop test mode: local demo data only; switch off after feature QA and before admin rollout.
 const DEMO_MODE = false;
 const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:ClipboardList},{label:"La caisse",icon:Wallet},{label:"Journalier",icon:FileText},{label:"Soldes & chèques",icon:ClipboardList},{label:"Clients & fournisseurs",icon:Users},{label:"Achat",icon:Package},{label:"Personnel",icon:Users},{label:"Stock",icon:Package},{label:"Dépense",icon:Wallet}];
@@ -215,6 +216,22 @@ export default function Home(){
  }
  const existing=drafts.find(x=>x.id===editingId);const d:Draft={id:existing?.id||crypto.randomUUID(),number:existing?.number||nextOrderNumber(drafts,workshop.orders),customer,createdAt:existing?.createdAt||new Date().toISOString(),glass,services:measuredServices,accessories,total:totals.ttc};const next=existing?drafts.map(x=>x.id===d.id?d:x):[d,...drafts];if(!await persistCloudState(workshop,next))return;setEditingId(d.id);setSaved(true);window.setTimeout(()=>setSaved(false),2500);};
  const saveWorkshop=async(next:WorkshopStore)=>persistCloudState(next,drafts);
+ const downloadBackup=()=>{
+  try{
+   const json=serializeWorkshopBackup(workshop,drafts,cloudRevision.current);
+   const blob=new Blob([json],{type:"application/json"});
+   const url=URL.createObjectURL(blob);
+   const link=document.createElement("a");
+   link.href=url;
+   link.download="cairo-verre-backup-"+new Date().toISOString().replace(/[:.]/g,"-")+".json";
+   document.body.appendChild(link);
+   link.click();
+   link.remove();
+   URL.revokeObjectURL(url);
+  }catch(error){
+   alert(error instanceof Error?"Impossible de créer la sauvegarde : "+error.message:"Impossible de créer la sauvegarde.");
+  }
+ };
  const customerKey=(name:string)=>name.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\\u0300-\\u036f]/g,"").replace(/\\s+/g," ");
  const customerNames=[...new Map([...(workshop.customers||[]).map(x=>x.name),...ledger.customers.map(x=>x.customer),...drafts.map(x=>x.customer).filter(Boolean)].map(name=>[customerKey(name),name])).values()];
  const saveNewCustomer=async()=>{
@@ -263,7 +280,7 @@ export default function Home(){
  <datalist id="devis-glass-catalog">{GLASS_CATALOG.map(name=><option key={name} value={name}/>)}</datalist><datalist id="devis-accessory-catalog">{ACCESSORY_CATALOG.map(name=><option key={name} value={name}/>)}</datalist>
  <aside className={collapsed?"sidebar collapsed":"sidebar"}><div className="brand"><img className="brand-mark" src="/cairo-verre-logo.svg" alt="Cairo Verre"/>{!collapsed&&<div><strong>CAIRO VERRE</strong></div>}</div><button className="collapse" onClick={()=>setCollapsed(!collapsed)} aria-label="Réduire le menu"><PanelLeftClose size={17}/></button><div className="nav-caption">{!collapsed&&"ESPACE DE TRAVAIL"}</div>
  {nav.map(item=><button key={item.label} className={"nav-item "+(section===item.label?"active":"")} onClick={()=>setSection(item.label)} title={item.label}><item.icon size={18}/>{!collapsed&&<span>{item.label}</span>}</button>)}<div className="sidebar-bottom"><Settings size={17}/>{!collapsed&&<span>Paramètres</span>}</div></aside>
- <section className="workspace"><header className="topbar"><div><span className="eyebrow">CAIRO VERRE / ATELIER</span><h1>{section}</h1></div><div className="top-right"><span className="status-dot"/><span>{DEMO_MODE?"Mode test · données locales":"Session administrateur"}</span>{!DEMO_MODE&&<button className="add-btn" onClick={async()=>{await createSupabaseBrowserClient().auth.signOut();setIsAdmin(false);}}>Déconnexion</button>}<div className="avatar">CV</div></div></header>
+ <section className="workspace"><header className="topbar"><div><span className="eyebrow">CAIRO VERRE / ATELIER</span><h1>{section}</h1></div><div className="top-right"><span className="status-dot"/><span>{DEMO_MODE?"Mode test · données locales":"Session administrateur"}</span><button className="add-btn" onClick={downloadBackup} title="Télécharger une copie de toutes les données de l’atelier au format JSON"><Download size={15}/> Sauvegarde</button>{!DEMO_MODE&&<button className="add-btn" onClick={async()=>{await createSupabaseBrowserClient().auth.signOut();setIsAdmin(false);}}>Déconnexion</button>}<div className="avatar">CV</div></div></header>
  {section==="Calcul"?<div className="content"><div className="intro"><div><h2>{editingDeliveredId?"Modifier une commande livrée":editingId?"Modifier le brouillon":"Nouveau devis"}</h2><p>Composez une commande : vitrage, services et accessoires dans un seul calcul.</p></div><div className="intro-actions"><span className="draft-count">{drafts.length} brouillon(s)</span><button className="add-btn" onClick={()=>{setCustomer("");setGlass([{label:"",widthMm:0,heightMm:0,quantity:1,pricePerM2:0,groupId:crypto.randomUUID()}]);setServices([]);setAccessories([]);setServiceWidth(0);setServiceHeight(0);setServicePieces(1);setEditingId(null);setEditingDeliveredId(null);setDeliveryDraftId(null);setInitialPaidAmount("");setInitialPaymentMethod("Espèces");setInitialChequeReference("");setInitialChequeDueDate("");setSaved(false);}}>+ Nouveau</button></div></div><div className="form-grid"><div className="main-column">
  <section className="panel"><div className="panel-heading"><div><span className="step">01</span><div><h3>Client</h3><p>Recherchez un client existant ou ajoutez-le avec le bouton +.</p></div></div></div>
   <div className="customer-search-row"><div className="customer-search-wrap"><input className="text-input" value={customer} onChange={e=>setCustomer(e.target.value)} placeholder="Rechercher le nom du client..."/>{customer.trim()&&customerNames.filter(name=>name.toLocaleLowerCase("fr").includes(customer.trim().toLocaleLowerCase("fr"))).length>0&&!customerNames.some(name=>customerKey(name)===customerKey(customer))&&<div className="customer-suggestions">{customerNames.filter(name=>name.toLocaleLowerCase("fr").includes(customer.trim().toLocaleLowerCase("fr"))).slice(0,6).map(name=><button type="button" key={name} onClick={()=>setCustomer(name)}>{name}</button>)}</div>}</div><button className="add-btn customer-add" onClick={()=>{setNewCustomerName(customer);setNewCustomerPhone("");setShowNewCustomer(v=>!v);}}><Plus size={14}/></button></div>
