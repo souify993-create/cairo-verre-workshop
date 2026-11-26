@@ -326,7 +326,7 @@ function printDraft(d:Pick<Draft,"number"|"customer"|"glass"|"services"|"accesso
  if(!w){alert("Autorisez les fenêtres contextuelles pour ouvrir l'impression.");return;}
  const esc=(s:string)=>String(s??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]||ch));
  const date=new Date().toLocaleDateString("fr-FR");
- const formatM=(mm:number)=>(mm/1000).toLocaleString("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3});
+ const formatM=(mm:number)=>(mm/1000).toLocaleString("fr-FR",{minimumFractionDigits:2,maximumFractionDigits:2});
  const formatArea=(m2:number)=>m2.toLocaleString("fr-FR",{minimumFractionDigits:3,maximumFractionDigits:3});
  const serviceShort=(name:string)=>{const k=name.trim().toLocaleUpperCase("fr");if(k==="RTC TOTAL")return "REC T";if(k.startsWith("RCT "))return "REC "+(k.includes("1 FACE")?"1F":k.includes("2 FACE")?"2F":"3F");if(k==="BISAUTAGE")return "BIS";if(k==="BP")return "BP";if(k.startsWith("VID "))return k;if(k.startsWith("COULLAGE "))return "COU "+k.slice(9);if(k.startsWith("ASSEMBLAGE "))return "ASS "+k.slice(11);return k.slice(0,3);};
  const areas=d.glass.map(g=>areaM2(g.widthMm,g.heightMm,g.quantity));
@@ -346,8 +346,8 @@ function printDraft(d:Pick<Draft,"number"|"customer"|"glass"|"services"|"accesso
    const first=items[0];
    const serviceCodes=linked.map(s=>serviceShort(s.name));
    const heading=(first.label||"Vitrage")+(serviceCodes.length?" · "+serviceCodes.join(" · "):"");
-   const dimensionRows=items.map(g=>'<tr><td>'+formatM(g.widthMm)+'</td><td>'+formatM(g.heightMm)+'</td><td class="num">'+g.quantity+'</td><td class="num">'+formatArea(areaM2(g.widthMm,g.heightMm,g.quantity))+'</td></tr>').join("");
-   grouped+='<section class="glass-card"><div class="glass-title">'+esc(heading)+'</div><table class="table"><thead><tr><th>Largeur (m)</th><th>Hauteur (m)</th><th class="num">Qté</th><th class="num">Surface (m²)</th></tr></thead><tbody>'+dimensionRows+'</tbody></table></section>';
+   const dimensionRows=items.map(g=>'<tr><td>'+formatM(g.heightMm)+'L × '+formatM(g.widthMm)+'H</td><td class="num">'+g.quantity+'</td><td class="num">'+formatArea(areaM2(g.widthMm,g.heightMm,g.quantity))+'</td></tr>').join("");;
+   grouped+='<section class="glass-card"><div class="glass-title">'+esc(heading)+'</div><table class="table"><thead><tr><th>Dimensions (m)</th><th class="num">Qté</th><th class="num">Surface (m²)</th></tr></thead><tbody>'+dimensionRows+'</tbody></table></section>';
   }
   const general=d.services.filter(s=>!s.groupId);
   const generalCodes=general.map(s=>serviceShort(s.name));
