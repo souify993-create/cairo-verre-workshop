@@ -74,7 +74,7 @@ export function IndependentInvoicePanel() {
     </section>
     <section className="panel"><div className="panel-heading"><div><h3>Vitrages et dimensions</h3><p>Les dimensions sont saisies en millimètres.</p></div><button className="add-btn" onClick={addLine}>+ Ajouter une ligne</button></div>
       <datalist id="independent-glass-catalog">{GLASS_CATALOG.map(name=><option key={name} value={name}/>)}</datalist>
-      {lines.map((line,index)=><div className="line-row" key={line.id}>
+      {lines.map((line,index)=><div className="independent-invoice-line" key={line.id}>
         <label className="field item-name"><span>Désignation</span><input list="independent-glass-catalog" value={line.label} onChange={e=>update(line.id,{label:e.target.value})}/></label>
         <label className="field"><span>Largeur (mm)</span><input type="number" min="1" value={line.widthMm||""} onChange={e=>update(line.id,{widthMm:Number(e.target.value)||0})}/></label>
         <label className="field"><span>Hauteur (mm)</span><input type="number" min="1" value={line.heightMm||""} onChange={e=>update(line.id,{heightMm:Number(e.target.value)||0})}/></label>
