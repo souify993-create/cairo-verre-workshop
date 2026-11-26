@@ -64,7 +64,7 @@ export function IndependentInvoicePanel() {
       <section class="meta"><div><label>CLIENT</label><strong>${esc(customer.name)}</strong></div><div><label>TÉLÉPHONE</label><strong>${esc(customer.phone || "—")}</strong></div><div><label>ADRESSE</label><strong>${esc(customer.address || "—")}</strong></div><div><label>ICE / IF</label><strong>${esc([customer.ice && "ICE : " + customer.ice, customer.taxId && "IF : " + customer.taxId].filter(Boolean).join(" · ") || "—")}</strong></div></section>
       <h2>DÉTAIL DES VITRAGES</h2><table><thead><tr><th>Désignation</th><th>Dimensions (m)</th><th class="num">Qté</th><th class="num">Surface</th><th class="num">Montant TTC</th></tr></thead><tbody>${lineHtml}</tbody></table>
       <section class="totals"><div><span>Total HT</span><strong>${money(totalHT)}</strong></div><div><span>TVA 20%</span><strong>${money(totalTTC-totalHT)}</strong></div><div class="grand"><span>Total TTC</span><strong>${money(totalTTC)}</strong></div></section>
-      <footer class="foot">Cairo Verre · Facture indépendante · ${number}</footer></main></body></html>`);
+      <footer class="foot">Cairo Verre · Facture indépendante</footer></main></body></html>`);
     win.document.close();
     // Wait for the logo and document fonts before opening the print dialog.
     window.setTimeout(() => {
