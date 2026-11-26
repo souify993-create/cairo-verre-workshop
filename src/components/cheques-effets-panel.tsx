@@ -17,7 +17,8 @@ export function ChequesEffetsPanel({orders,invoices,onUpdateOrder,onUpdateInvoic
   const supplierRows=invoices.flatMap(invoice=>(invoice.payments||[]).filter(p=>p.method==="Chèque"||p.method==="Effet").map(p=>({id:p.id,ownerId:invoice.id,owner:invoice.supplier,document:invoice.invoiceNumber,kind:p.method as Kind,reference:p.reference||invoice.chequeNumber||"—",amount:p.amount,registered:p.date,due:p.dueDate||invoice.chequeDate||p.date,state:p.status==="confirmed"?"Réglé":p.status==="cancelled"?"Supprimé":"En attente",side:"Fournisseurs" as const})));
   return [...customerRows,...supplierRows];
  },[orders,invoices]);
- const [confirmRow,setConfirmRow]=useState<(typeof rows)[number]|null>(null);\n const visible=rows.filter(r=>(filter==="Archive"?r.state!=="En attente":filter==="Tous"?true:r.side===filter&&r.state==="En attente")&&(kind==="Tous"||r.kind===kind)&&(status==="Tous"||r.state===status));
+ const [confirmRow,setConfirmRow]=useState<(typeof rows)[number]|null>(null);
+ const visible=rows.filter(r=>(filter==="Archive"?r.state!=="En attente":filter==="Tous"?true:r.side===filter&&r.state==="En attente")&&(kind==="Tous"||r.kind===kind)&&(status==="Tous"||r.state===status));
  const settle=async(row:typeof rows[number])=>{
   if(row.side==="Clients"){const order=orders.find(o=>o.id===row.ownerId);if(!order)return;const updated={...order,payments:order.payments.map(p=>p.id===row.id?{...p,status:"confirmed" as const}:p),updatedAt:new Date().toISOString()};await onUpdateOrder(updated);}
   else {const invoice=invoices.find(x=>x.id===row.ownerId);if(!invoice)return;await onUpdateInvoice({...invoice,payments:(invoice.payments||[]).map(p=>p.id===row.id?{...p,status:"confirmed" as const}:p)});}
