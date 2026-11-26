@@ -19,7 +19,7 @@ test("rejects invalid independent invoice input", () => {
 });
 
 test("independent invoice number has a separate FI prefix", () => {
-  assert.match(independentInvoiceNumber(new Date(2026, 10, 26, 12, 5, 9, 37)), /^FA\\d{4}$/);
+  assert.match(independentInvoiceNumber(), /^FA\d{4}$/);
 });
 
 test("cent allocation never creates a negative row for many tiny shares", () => {
