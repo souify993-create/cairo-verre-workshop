@@ -59,7 +59,16 @@ export function IndependentInvoicePanel() {
       <h2>DÉTAIL DES VITRAGES</h2><table><thead><tr><th>Désignation</th><th>Dimensions (m)</th><th class="num">Qté</th><th class="num">Surface</th><th class="num">Montant TTC</th></tr></thead><tbody>${lineHtml}</tbody></table>
       <section class="totals"><div><span>Total HT</span><strong>${money(totalHT)}</strong></div><div><span>TVA 20%</span><strong>${money(totalTTC-totalHT)}</strong></div><div class="grand"><span>Total TTC</span><strong>${money(totalTTC)}</strong></div></section>
       <footer class="foot">Cairo Verre · Facture indépendante · ${number}</footer></main></body></html>`);
-    win.document.close(); win.focus(); window.setTimeout(() => win.print(), 400);
+    win.document.close();
+    // Wait for the logo and document fonts before opening the print dialog.
+    window.setTimeout(() => {
+      void (async () => {
+        const images = Array.from(win.document.images);
+        await Promise.all(images.map(image => image.decode().catch(() => undefined)));
+        try { await win.document.fonts.ready; } catch { /* use the browser's fallback fonts */ }
+        if (!win.closed) { win.focus(); win.print(); }
+      })();
+    }, 0);
   };
   return <div className="content">
     <div className="intro"><div><h2>Facture indépendante</h2><p>Création et impression PDF sans enregistrer d’opération dans l’atelier.</p></div></div>
