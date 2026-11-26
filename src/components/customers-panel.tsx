@@ -2,11 +2,12 @@
 import { useMemo, useState } from "react";
 import type { CustomerBalance } from "@/lib/ledger";
 import type { StoredOrder } from "@/lib/workshop";
-import type { CustomerRecord } from "@/lib/workshop-storage";
+import type { CustomerRecord, SupplierInvoice } from "@/lib/workshop-storage";
+import { SupplierAccountsPanel } from "@/components/supplier-accounts-panel";
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 const netPaid=(order:StoredOrder)=>order.payments.filter(p=>p.status==="confirmed").reduce((s,p)=>s+p.amount,0)-order.refunds.filter(r=>r.status==="confirmed").reduce((s,r)=>s+r.amount,0);
 const key=(value:string)=>value.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ");
-export function CustomersPanel({customers,orders,customerRecords,onSettleAvoir,onUpdateCustomer}:{customers:CustomerBalance[];orders:StoredOrder[];customerRecords:CustomerRecord[];onSettleAvoir:(orderId:string,avoirId:string)=>void;onUpdateCustomer:(customer:CustomerRecord)=>Promise<boolean>}){
+export function CustomersPanel({customers,orders,customerRecords,onSettleAvoir,onUpdateCustomer,invoices,onUpdateSupplierInvoice}:{customers:CustomerBalance[];orders:StoredOrder[];customerRecords:CustomerRecord[];onSettleAvoir:(orderId:string,avoirId:string)=>void;onUpdateCustomer:(customer:CustomerRecord)=>Promise<boolean>;invoices:SupplierInvoice[];onUpdateSupplierInvoice:(invoice:SupplierInvoice)=>void}){
  const [search,setSearch]=useState(""),[page,setPage]=useState(0),[selected,setSelected]=useState<string|null>(null),[editing,setEditing]=useState(false);
  const [editName,setEditName]=useState(""),[editPhone,setEditPhone]=useState(""),[editIce,setEditIce]=useState(""),[editRc,setEditRc]=useState("");
  const names=useMemo(()=>{const all=[...customerRecords.map(c=>c.name),...customers.map(c=>c.customer)];return [...new Map(all.map(name=>[key(name),name])).values()].sort((a,b)=>a.localeCompare(b,"fr"));},[customerRecords,customers]);
@@ -20,6 +21,7 @@ export function CustomersPanel({customers,orders,customerRecords,onSettleAvoir,o
  const saveEdit=async()=>{if(!record)return;const name=editName.trim(),phone=editPhone.trim();if(!name||!phone){alert("Le nom et le numéro de téléphone sont obligatoires.");return;}if(customerRecords.some(c=>c.id!==record.id&&key(c.name)===key(name))||orders.some(o=>key(o.customer)===key(name)&&key(o.customer)!==key(record.name))){alert("Un client porte déjà ce nom. Chaque nom de client doit être unique.");return;}const ok=await onUpdateCustomer({id:record.id,name,phone,...(editIce.trim()?{ice:editIce.trim()}:{}),...(editRc.trim()?{rc:editRc.trim()}:{})});if(ok){setSelected(name);setEditing(false);}};
  return <div className="content">
   <div className="intro"><div><h2>Comptes clients</h2><p>Coordonnées, historique des commandes et situation des comptes clients.</p></div><span className="draft-count">{names.length} client(s)</span></div>
+  <SupplierAccountsPanel invoices={invoices} onUpdate={onUpdateSupplierInvoice}/>
   <section className="panel"><div className="panel-heading"><div><h3 style={{color:"#c6534b"}}>Client Avoir</h3><p>Les avoirs issus des modifications de commandes. Leur règlement ne crée aucune Sortie dans la caisse.</p></div><span className="draft-count">{avoirs.length} avoir(s)</span></div>
    {avoirs.length?avoirs.map(({order,avoir})=><div className="saved-draft" key={avoir.id}><div><strong>{order.customer} · {order.number}</strong><span>{avoir.date} · Avoir client en attente</span></div><strong>{money(avoir.amount)}</strong><button className="add-btn" onClick={()=>onSettleAvoir(order.id,avoir.id)}>Rembourser</button></div>):<div className="empty-inline">Aucun avoir client en attente.</div>}
   </section>
