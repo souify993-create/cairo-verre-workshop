@@ -16,12 +16,12 @@ export function allocateIndependentInvoiceTotal(
   lines: Array<Pick<GlassLine, "label" | "widthMm" | "heightMm" | "quantity">>,
   totalTTC: number,
 ): IndependentInvoiceLine[] {
-  if (!Number.isFinite(totalTTC) || totalTTC < 0) throw new Error("Le total doit être un montant positif.");
+  if (!Number.isFinite(totalTTC) || Math.round(totalTTC * 100) < 1) throw new Error("Le total doit être au minimum de 0,01 DH.");
   if (!lines.length) throw new Error("Ajoutez au moins une ligne de vitrage.");
   const weights = lines.map(line => {
     if (!line.label.trim() || !Number.isFinite(line.widthMm) || line.widthMm <= 0 ||
         !Number.isFinite(line.heightMm) || line.heightMm <= 0 ||
-        !Number.isFinite(line.quantity) || line.quantity <= 0) {
+        !Number.isFinite(line.quantity) || !Number.isInteger(line.quantity) || line.quantity <= 0) {
       throw new Error("Vérifiez la désignation, les dimensions et les quantités.");
     }
     return areaM2(line.widthMm, line.heightMm, line.quantity);
