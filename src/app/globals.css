@@ -126,3 +126,6 @@
 .employee-advance-row{margin-top:14px}
 .employee-edit-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:520px){.employee-modal{padding:17px}.employee-profile-grid{gap:12px}.team-table-footer .save-btn{width:100%}}
+
+.independent-invoice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media(max-width:760px){.independent-invoice-grid{grid-template-columns:1fr}}
