@@ -393,7 +393,7 @@ function printDraft(d:Pick<Draft,"number"|"customer"|"glass"|"services"|"accesso
  const pageStyle=kind==="Facture"?"@page{size:A4 portrait;margin:0}.page{width:198mm;min-height:287mm;padding:10mm 12mm}":"@page{size:A5 portrait;margin:0}";
  const bpStyles=kind==="BP"?'.bp-head{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #2563a6;padding-bottom:3mm;margin-bottom:3mm}.bp-head>div{line-height:1.5}':"";
  w.document.open();
- w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'+kind+' '+esc(d.number)+'</title><style'>"+styles+pageStyle+bpStyles+'+'</style></head><body>'+body+'</body></html>');
+ w.document.write('<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>'+kind+' '+esc(d.number)+'</title><style>'+styles+pageStyle+bpStyles+'</style></head><body>'+body+'</body></html>');
  w.document.close();
  w.focus();
  window.setTimeout(()=>{try{w.print();}catch{alert("La fenêtre d'impression n'a pas pu s'ouvrir. Utilisez Imprimer depuis le navigateur.");}},400);
