@@ -126,3 +126,16 @@ test("cancelled supplier cheques release the reserved invoice balance and are no
  const over=decodeWorkshopStore(JSON.stringify({version:1,orders:[],accessoryPurchases:[],supplierInvoices:[{...invoice,payments:[{...invoice.payments[0],status:"pending"},{id:"p-extra",date:"2026-11-26",amount:1,method:"Espèces",status:"confirmed"}]}]}));
  assert.equal(over.supplierInvoices.length,0);
 });
+
+
+test("customer remission payment records are retained without changing other cash methods", () => {
+  const orderWithRemise = {
+    ...delivered,
+    payments: [{ id: "remise-1", method: "Remise", amount: 20, status: "confirmed", date: "2026-11-26" }],
+  };
+  const decoded = decodeWorkshopStore(JSON.stringify({
+    version: 1, orders: [orderWithRemise], accessoryPurchases: [],
+  }));
+  assert.equal(decoded.orders.length, 1);
+  assert.equal(decoded.orders[0].payments[0].method, "Remise");
+});
