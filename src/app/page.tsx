@@ -93,7 +93,7 @@ export default function Home(){
   let active=true;
   supabase.auth.getSession().then(({data})=>{
    if(!active)return;
-   setIsAdmin(data.session?.user.app_metadata?.role==="admin");
+   setIsAdmin(data.session?.user.app_metadata?.role==="admin" && session?.user.app_metadata?.application==="cairo-verre" && data.session?.user.app_metadata?.application==="cairo-verre");
    setAuthReady(true);
   }).catch(()=>{if(active)setAuthReady(true);});
   const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
