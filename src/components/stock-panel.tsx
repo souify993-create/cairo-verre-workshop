@@ -17,8 +17,5 @@ export function StockPanel({purchases,stock,onAdd,accessoryCatalog}:{purchases:A
   <section className="panel"><div className="panel-heading"><div><h3>État du stock</h3><p>Disponible = quantité achetée − quantité consommée par les commandes livrées.</p></div><span className="draft-count">{stock.length} référence(s)</span></div>
    {stock.length?<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}><thead><tr><th style={{textAlign:"left",padding:10}}>Accessoire</th><th style={{textAlign:"right",padding:10}}>Acheté</th><th style={{textAlign:"right",padding:10}}>Consommé</th><th style={{textAlign:"right",padding:10}}>Disponible</th></tr></thead><tbody>{stock.map(row=><tr key={row.accessoryId} style={{borderTop:"1px solid #e7ecee"}}><td style={{padding:10}}>{row.label}</td><td style={{padding:10,textAlign:"right"}}>{row.purchased}</td><td style={{padding:10,textAlign:"right"}}>{row.consumed}</td><td style={{padding:10,textAlign:"right",fontWeight:700,color:row.available<0?"#c45e50":"#167b78"}}>{row.available}</td></tr>)}</tbody></table></div>:<div className="empty-inline">Aucun achat d'accessoire enregistré.</div>}
   </section>
-  <section className="panel"><div className="panel-heading"><div><h3>Historique des achats</h3><p>Les entrées d'achat enregistrées sur cet appareil.</p></div></div>
-   {purchases.length?purchases.map((p,i)=><div className="saved-draft" key={p.accessoryId+"-"+i}><div><strong>{p.label}</strong><span>Référence : {p.accessoryId}</span></div><strong>+ {p.quantity}</strong></div>):<div className="empty-inline">Aucun achat enregistré.</div>}
-  </section>
  </div>;
 }
