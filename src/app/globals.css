@@ -71,3 +71,15 @@
 
 /* Original Cairo Verre glass-panel logo */
 .brand-mark{width:42px;height:42px;object-fit:contain;display:block;background:transparent;border-radius:0;flex:none}
+
+
+/* Compact footer and consistent in-app notices */
+.workspace-footer{display:flex;justify-content:flex-end;padding:16px 34px 26px;border-top:1px solid var(--line);background:#fff}
+.app-dialog-overlay{position:fixed;inset:0;z-index:1000;background:rgba(15,30,48,.48);display:grid;place-items:center;padding:20px;backdrop-filter:blur(3px)}
+.app-dialog{width:min(100%,440px);background:#fff;border-radius:18px;padding:25px;box-shadow:0 24px 80px rgba(10,25,45,.24);border:1px solid #e4eaf0;animation:dialogAppear .16s ease-out}
+.app-dialog-icon{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;background:#edf5fc;color:#2563a6;font-size:21px;font-weight:800;margin-bottom:15px}
+.app-dialog-icon.success{background:#eaf7ef;color:#258253}.app-dialog-icon.warning{background:#fff6e7;color:#b7791f}.app-dialog-icon.error,.app-dialog-icon.confirm{background:#fff0ee;color:#c4473e}
+.app-dialog h3{margin:0 0 8px;font-size:18px;color:#17324f}.app-dialog p{margin:0 0 22px;font-size:14px;line-height:1.65;color:#607286;white-space:pre-wrap;overflow-wrap:anywhere}
+.app-dialog-actions{display:flex;justify-content:flex-end;gap:10px}.app-dialog-primary{background:#245f99!important;color:#fff!important;border-color:#245f99!important;padding:9px 17px}.app-dialog-primary.danger{background:#b9433b!important;border-color:#b9433b!important}
+@keyframes dialogAppear{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:760px){.workspace-footer{padding:14px 14px 22px}.app-dialog{padding:21px}}
