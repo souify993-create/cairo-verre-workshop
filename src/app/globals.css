@@ -68,3 +68,6 @@
 .customer-edit-panel{border-color:#dce8f5;background:#f7fbff}
 .customer-suggestions{border-color:#dbe7f5}
 @media(max-width:760px){.sidebar{background:#fff}}
+
+/* Original Cairo Verre glass-panel logo */
+.brand-mark{width:42px;height:42px;object-fit:contain;display:block;background:transparent;border-radius:0;flex:none}
