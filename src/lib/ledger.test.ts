@@ -127,3 +127,21 @@ test("cancelled supplier cheques never create cash outflows",()=>{
  const result=deriveLedger([],[],[{id:"inv-cancelled",supplier:"Fournisseur",invoiceNumber:"F-CAN",paidAmount:0,paymentMethod:"Chèque",payments:[{id:"sp-cancelled",date:"2026-11-25",amount:300,method:"Chèque",status:"cancelled"}]}]);
  assert.equal(result.cashMovements.length,0);
 });
+
+
+test("customer remission covers the waived balance but appears as a cash outflow", () => {
+  const result = deriveLedger([order({
+    totalTTC: 5120,
+    payments: [
+      { id: "cash-5000", method: "Espèces", amount: 5000, status: "confirmed", date: "2026-11-26" },
+      { id: "remise-120", method: "Remise", amount: 120, status: "confirmed", date: "2026-11-26" },
+    ],
+  })], []);
+  assert.equal(result.customers[0].remaining, 0);
+  assert.equal(result.customers[0].paid, 5120);
+  assert.equal(result.cashMovements.length, 2);
+  assert.equal(result.cashMovements.find(m => m.kind === "Paiement")?.direction, "Entrée");
+  assert.equal(result.cashMovements.find(m => m.kind === "Paiement")?.amount, 5000);
+  assert.equal(result.cashMovements.find(m => m.kind === "Remise")?.direction, "Sortie");
+  assert.equal(result.cashMovements.find(m => m.kind === "Remise")?.amount, 120);
+});

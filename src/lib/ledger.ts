@@ -1,4 +1,4 @@
-export type PaymentMethod = "Espèces" | "Virement" | "Chèque" | "Effet";
+export type PaymentMethod = "Espèces" | "Virement" | "Chèque" | "Effet" | "Remise";
 export type OrderStatus = "draft" | "delivered" | "cancelled";
 export type AccessoryUse = { accessoryId: string; label: string; quantity: number };
 export type Payment = { id: string; method: PaymentMethod; amount: number; status: "pending" | "confirmed" | "cancelled"; date?: string; dueDate?: string; reference?: string };
@@ -16,7 +16,7 @@ export type WorkshopOrder = {
   avoirs?: CustomerAvoir[];
 };
 export type AccessoryPurchase = { accessoryId: string; label: string; quantity: number };
-export type CashMovement = { orderId: string; reference: string; method: PaymentMethod; direction: "Entrée" | "Sortie"; amount: number; kind: "Paiement" | "Remboursement" | "Achat fournisseur" | "Dépense" | "Avance salaire" | "Salaire" | "Règlement salaire"; counterparty?: string; date?: string };
+export type CashMovement = { orderId: string; reference: string; method: PaymentMethod; direction: "Entrée" | "Sortie"; amount: number; kind: "Paiement" | "Remise" | "Remboursement" | "Achat fournisseur" | "Dépense" | "Avance salaire" | "Salaire" | "Règlement salaire"; counterparty?: string; date?: string };
 export type CustomerBalance = { customer: string; total: number; paid: number; remaining: number; credit: number };
 export type LedgerSnapshot = {
   cashMovements: CashMovement[];
@@ -67,7 +67,11 @@ export function deriveLedger(orders: WorkshopOrder[], purchases: AccessoryPurcha
       if (!amount) continue;
       if (customer) customerMap.get(customer)!.paid += amount;
       if (payment.status === "pending" || (!payment.status && (payment.method === "Chèque" || payment.method === "Effet"))) continue;
-      cashMovements.push({ orderId: order.id, reference: order.number, method: payment.method, direction: "Entrée", amount, kind: "Paiement", counterparty: order.customer, ...((payment.dueDate || payment.date) ? { date: payment.dueDate || payment.date } : {}) });
+      if (payment.method === "Remise") {
+        cashMovements.push({ orderId: order.id, reference: order.number, method: payment.method, direction: "Sortie", amount, kind: "Remise", counterparty: order.customer, ...(payment.date ? { date: payment.date } : {}) });
+      } else {
+        cashMovements.push({ orderId: order.id, reference: order.number, method: payment.method, direction: "Entrée", amount, kind: "Paiement", counterparty: order.customer, ...((payment.dueDate || payment.date) ? { date: payment.dueDate || payment.date } : {}) });
+      }
     }
     for (const refund of order.refunds) {
       if (refund.status !== "confirmed") continue;

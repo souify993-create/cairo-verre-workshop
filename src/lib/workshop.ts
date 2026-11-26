@@ -151,8 +151,7 @@ export function addPayment(
   if (order.status !== "delivered") throw new Error("Le paiement ne peut être ajouté qu'à une commande livrée.");
   if (!Number.isFinite(payment.amount) || payment.amount <= 0) throw new Error("Le montant du paiement doit être supérieur à zéro.");
   if (order.payments.some((item) => item.id === payment.id)) throw new Error("Identifiant de paiement déjà utilisé.");
-  // A cheque is a receivable, never a cash entry at the moment it is handed over.
-  // Cash and bank transfers represent money already received when registered here.
+  // Cheques and bills remain pending; cash, transfers and approved remissions are confirmed immediately.
   const recorded: Payment = {
     ...payment,
     date: payment.date ?? now.slice(0, 10),

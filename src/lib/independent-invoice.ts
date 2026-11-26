@@ -39,7 +39,6 @@ export function allocateIndependentInvoiceTotal(
   return lines.map((line, index) => ({ ...line, weight: weights[index], amount: cents[index] / 100 }));
 }
 
-export function independentInvoiceNumber(date = new Date()): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `FI-${date.getFullYear()}${pad(date.getMonth()+1)}${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}-${String(date.getMilliseconds()).padStart(3, "0")}`;
+export function independentInvoiceNumber(): string {
+  return `FA${String(1000 + Math.floor(Math.random() * 9000))}`;
 }

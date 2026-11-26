@@ -18,8 +18,8 @@ test("rejects invalid independent invoice input", () => {
   assert.throws(() => allocateIndependentInvoiceTotal([{ label: "", widthMm: 0, heightMm: 1, quantity: 1 }], 100));
 });
 
-test("independent invoice number has a separate FI prefix", () => {
-  assert.match(independentInvoiceNumber(new Date(2026, 10, 26, 12, 5, 9, 37)), /^FI-20261126-120509-037$/);
+test("independent invoice number uses a compact FA reference", () => {
+  assert.match(independentInvoiceNumber(), /^FA\d{4}$/);
 });
 
 test("cent allocation never creates a negative row for many tiny shares", () => {
