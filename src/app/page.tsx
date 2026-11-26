@@ -24,7 +24,7 @@ import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { ACCESSORY_CATALOG, GLASS_CATALOG, catalogKey } from "@/lib/catalog";
 import { loadCloudWorkshop, saveCloudWorkshop } from "@/lib/cloud-workshop";
 // Temporary workshop test mode: local demo data only; switch off after feature QA and before admin rollout.
-const DEMO_MODE = true;
+const DEMO_MODE = false;
 const nav=[{label:"Calcul",icon:Calculator},{label:"List commandes",icon:ClipboardList},{label:"La caisse",icon:Wallet},{label:"Journalier",icon:FileText},{label:"Soldes & chèques",icon:ClipboardList},{label:"Clients & fournisseurs",icon:Users},{label:"Achat",icon:Package},{label:"Personnel",icon:Users},{label:"Stock",icon:Package},{label:"Dépense",icon:Wallet}];
 const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency:"MAD",maximumFractionDigits:2}).format(n);
 function serviceCode(name:string){const key=name.trim().toLocaleUpperCase("fr");if(key==="RTC TOTAL")return {main:"REC",sub:"T"};if(key.startsWith("RCT "))return {main:"REC",sub:key.includes("1 FACE")?"1F":key.includes("2 FACE")?"2F":"3F"};if(key==="BISAUTAGE")return {main:"BIS",sub:""};if(key==="BP")return {main:"BP",sub:""};if(key.startsWith("VID "))return {main:"VID",sub:key.replace("VID ","")};if(key.startsWith("COULLAGE "))return {main:"COU",sub:key.replace("COULLAGE ","")};if(key.startsWith("ASSEMBLAGE "))return {main:"ASS",sub:key.replace("ASSEMBLAGE ","").slice(0,4)};if(key==="SABLAGE")return {main:"SAB",sub:""};if(key==="DESSIN")return {main:"DES",sub:""};return {main:key.slice(0,3),sub:""};}
@@ -93,11 +93,11 @@ export default function Home(){
   let active=true;
   supabase.auth.getSession().then(({data})=>{
    if(!active)return;
-   setIsAdmin(data.session?.user.app_metadata?.role==="admin");
+   setIsAdmin(data.session?.user.app_metadata?.role==="admin" && data.session?.user.app_metadata?.application==="cairo-verre");
    setAuthReady(true);
   }).catch(()=>{if(active)setAuthReady(true);});
   const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
-   if(active)setIsAdmin(session?.user.app_metadata?.role==="admin");
+   if(active)setIsAdmin(session?.user.app_metadata?.role==="admin" && session?.user.app_metadata?.application==="cairo-verre");
   });
   return ()=>{active=false;subscription.unsubscribe();};
  },[]);

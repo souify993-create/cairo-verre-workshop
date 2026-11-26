@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Cairo Verre — Gestion d'atelier",
+  "short_name": "Cairo Verre",
+  "description": "Gestion des devis, commandes, caisse, clients et personnel de Cairo Verre.",
+  "lang": "fr-MA",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "any",
+  "background_color": "#f4f8fd",
+  "theme_color": "#17324f",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/pwa-icon.svg", "sizes": "192x192 512x512", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
