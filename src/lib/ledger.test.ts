@@ -76,6 +76,7 @@ test("cash movements preserve actual dates and keep legacy records explicitly un
     { id: "sup-date", supplier: "Fournisseur", invoiceNumber: "F-1", paidAmount: 30, paymentMethod: "Virement", paidDate: "2026-11-24" },
   ]);
   assert.equal(result.cashMovements.find(x => x.kind === "Paiement" && x.method === "Espèces")?.date, "2026-11-25");
+  assert.equal(result.cashMovements.find(x => x.kind === "Paiement" && x.method === "Espèces")?.counterparty, "Client A");
   assert.equal(result.cashMovements.find(x => x.kind === "Paiement" && x.method === "Virement")?.date, undefined);
   assert.equal(result.cashMovements.find(x => x.kind === "Remboursement")?.direction, "Sortie");
   assert.equal(result.cashMovements.find(x => x.kind === "Achat fournisseur")?.date, "2026-11-24");
