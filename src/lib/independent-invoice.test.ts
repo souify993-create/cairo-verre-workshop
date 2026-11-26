@@ -13,6 +13,8 @@ test("allocates the exact invoice total to glass rows using area weights", () =>
 
 test("rejects invalid independent invoice input", () => {
   assert.throws(() => allocateIndependentInvoiceTotal([], 100));
+  assert.throws(() => allocateIndependentInvoiceTotal([{ label: "Glass", widthMm: 1000, heightMm: 1000, quantity: 1 }], 0.001));
+  assert.throws(() => allocateIndependentInvoiceTotal([{ label: "Glass", widthMm: 1000, heightMm: 1000, quantity: 1.5 }], 100));
   assert.throws(() => allocateIndependentInvoiceTotal([{ label: "", widthMm: 0, heightMm: 1, quantity: 1 }], 100));
 });
 
