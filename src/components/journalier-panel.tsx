@@ -17,9 +17,10 @@ export function JournalierPanel({movements,scheduledMovements=[],expenses,employ
  const undated=useMemo(()=>allMovements.filter(m=>!m.date),[allMovements]);
  const incoming=dated.filter(m=>m.direction==="Entrée").reduce((s,m)=>s+m.amount,0);
  const outgoing=dated.filter(m=>m.direction==="Sortie").reduce((s,m)=>s+m.amount,0);
- return <div className="content">
-  <div className="intro"><div><h2>Journalier · Entrée / Sortie</h2><p>Les charges et salaires sont répartis par jour ; les avances sont déduites du salaire pour éviter tout double comptage.</p></div><div className="intro-actions print-hide"><label className="field"><span>Date du journal</span><input className="text-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="add-btn" onClick={()=>window.print()}>Imprimer le journal</button></div></div>
-  <section className="panel">
+ return <div className="content journalier-content">
+  <div className="journalier-print-date">{new Date(date+"T00:00:00").toLocaleDateString("fr-FR")}</div>
+  <div className="intro print-hide"><div><h2>Journalier · Entrée / Sortie</h2><p>Les charges et salaires sont répartis par jour ; les avances sont déduites du salaire pour éviter tout double comptage.</p></div><div className="intro-actions print-hide"><label className="field"><span>Date du journal</span><input className="text-input" type="date" value={date} onChange={e=>setDate(e.target.value)}/></label><button className="add-btn" onClick={()=>window.print()}>Imprimer le journal</button></div></div>
+  <section className="panel journalier-totals print-hide">
    <div className="summary-line"><span>Total Entrée</span><strong className="amount-in">{money(incoming)}</strong></div>
    <div className="summary-line"><span>Total Sortie</span><strong className="amount-out">{money(outgoing)}</strong></div>
    <div className="summary-divider"/>
