@@ -1,5 +1,5 @@
 import type { PaymentMethod } from "./ledger";
-export type Employee = { id:string; name:string; weeklySalary:number; active:boolean };
+export type Employee = { id:string; name:string; phone?:string; weeklySalary:number; active:boolean };
 export type AttendanceDay = { date:string; hours:number };
 export type PayrollAdvance = { id:string; date:string; amount:number; method:PaymentMethod };
 export type SalaryPayment = { id:string; date:string; amount:number; method:PaymentMethod };
