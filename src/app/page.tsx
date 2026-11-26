@@ -71,7 +71,7 @@ export default function Home(){
  const ledger=useMemo(()=>deriveLedger(workshop.orders,workshop.accessoryPurchases,workshop.supplierInvoices),[workshop]);
  const cashMovements=useMemo(()=>[...ledger.cashMovements,...derivePayrollCashMovements(workshop.payrollWeeks||[],workshop.employees||[])],[ledger,workshop.payrollWeeks,workshop.employees]);
 
- const printDocument=(d:Pick<Draft,"number"|"customer"|"glass"|"services"|"accessories"|"total">,kind:"Devis"|"BP"|"BL"|"Facture")=>printDocument(d,kind,workshop.customers?.find(c=>c.name.trim().toLocaleLowerCase("fr")===d.customer.trim().toLocaleLowerCase("fr"))?.ice);
+ const printDocument=(d:Pick<Draft,"number"|"customer"|"glass"|"services"|"accessories"|"total">,kind:"Devis"|"BP"|"BL"|"Facture")=>printDraft(d,kind,workshop.customers?.find(c=>c.name.trim().toLocaleLowerCase("fr")===d.customer.trim().toLocaleLowerCase("fr"))?.ice);
  const orderRows=useMemo(()=>[
   ...drafts.map(d=>({kind:"draft" as const,id:d.id,number:d.number,customer:d.customer,createdAt:d.createdAt,total:d.total,draft:d})),
   ...workshop.orders.map(o=>({kind:"order" as const,id:o.id,number:o.number,customer:o.customer,createdAt:o.createdAt,total:o.totalTTC,status:o.status,order:o})),
