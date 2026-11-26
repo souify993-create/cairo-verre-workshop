@@ -153,3 +153,27 @@
  body:has(.outstanding-list-panel) .outstanding-list-panel{position:absolute;left:0;top:0;width:100%;margin:0!important;padding:12px!important;border:0!important}
  body:has(.outstanding-list-panel) .outstanding-list-panel .print-hide{display:none!important}
 }
+
+
+/* Final print refinements: journal and customer/supplier account statements */
+.delivery-customer-field{position:relative;min-width:0}
+.delivery-customer-search{position:relative;width:100%}
+.delivery-customer-search .text-input{width:100%;max-width:none}
+.delivery-customer-suggestions{top:calc(100% + 5px);max-height:260px;overflow-y:auto}
+.customer-new-option{padding:10px 12px;border-top:1px solid #edf0f1;background:#f7fbff;color:#64788c;font-size:11px;line-height:1.5}
+.customer-new-option strong{color:#174b80}
+.journalier-print-date{display:none}
+@media print{
+ @page{margin:12mm}
+ body:has(.journalier-content){background:#fff}
+ body:has(.journalier-content) .journalier-content{padding:0!important;margin:0!important;max-width:none!important}
+ body:has(.journalier-content) .journalier-print-date{display:block!important;text-align:right!important;font-size:11px!important;font-weight:700!important;color:#17324f!important;margin:0 0 12px!important}
+ body:has(.journalier-content) .journalier-totals{display:none!important}
+ body:has(.journalier-content) .journalier-content>.panel{break-inside:avoid;page-break-inside:avoid}
+ body:has(.customer-statement) .shell,body:has(.supplier-statement) .shell{display:block!important;min-height:0!important}
+ body:has(.customer-statement) .workspace,body:has(.supplier-statement) .workspace{display:block!important;width:100%!important}
+ body:has(.customer-statement) .content,body:has(.supplier-statement) .content{display:block!important;max-width:none!important;margin:0!important;padding:0!important}
+ body:has(.customer-statement) .customer-statement,body:has(.supplier-statement) .supplier-statement{position:static!important;display:block!important;visibility:visible!important;width:100%!important;margin:0!important;padding:0!important;border:0!important;break-inside:auto!important;page-break-inside:auto!important}
+ body:has(.customer-statement) .customer-statement *,body:has(.supplier-statement) .supplier-statement *{visibility:visible!important}
+ body:has(.customer-statement) .customer-statement .print-hide,body:has(.supplier-statement) .supplier-statement .print-hide{display:none!important}
+}
