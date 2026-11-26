@@ -18,7 +18,7 @@ test("rejects invalid independent invoice input", () => {
   assert.throws(() => allocateIndependentInvoiceTotal([{ label: "", widthMm: 0, heightMm: 1, quantity: 1 }], 100));
 });
 
-test("independent invoice number has a separate FI prefix", () => {
+test("independent invoice number uses a compact FA reference", () => {
   assert.match(independentInvoiceNumber(), /^FA\d{4}$/);
 });
 
