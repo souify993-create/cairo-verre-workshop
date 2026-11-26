@@ -40,6 +40,5 @@ export function allocateIndependentInvoiceTotal(
 }
 
 export function independentInvoiceNumber(): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
   return `FA${String(1000 + Math.floor(Math.random() * 9000))}`;
 }
