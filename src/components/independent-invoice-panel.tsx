@@ -35,7 +35,7 @@ export function IndependentInvoicePanel() {
     catch (e) { setError(e instanceof Error ? e.message : "Vérifiez les lignes de vitrage."); return; }
     const win = window.open("", "_blank", "width=900,height=700");
     if (!win) { setError("Autorisez les fenêtres contextuelles pour imprimer la facture."); return; }
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(invoiceDate) || Number.isNaN(new Date(`${invoiceDate}T00:00:00`).getTime())) { setError("Choisissez une date de facture valide."); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(invoiceDate) || Number.isNaN(new Date(`${invoiceDate}T00:00:00`).getTime())) { setError("Choisissez une date de facture valide."); return; }
     const number = invoiceNumber;
     const date = new Date(`${invoiceDate}T00:00:00`).toLocaleDateString("fr-FR");
     const totalTTC = Math.round(Number(total) * 100) / 100;
