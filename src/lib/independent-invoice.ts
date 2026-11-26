@@ -39,7 +39,7 @@ export function allocateIndependentInvoiceTotal(
   return lines.map((line, index) => ({ ...line, weight: weights[index], amount: cents[index] / 100 }));
 }
 
-export function independentInvoiceNumber(date = new Date()): string {
+export function independentInvoiceNumber(): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `FA${String(1000 + Math.floor(Math.random() * 9000))}`;
 }
