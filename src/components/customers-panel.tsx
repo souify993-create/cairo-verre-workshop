@@ -8,7 +8,7 @@ const money=(n:number)=>new Intl.NumberFormat("fr-MA",{style:"currency",currency
 const netPaid=(order:StoredOrder)=>order.payments.filter(p=>p.status==="confirmed").reduce((s,p)=>s+p.amount,0)-order.refunds.filter(r=>r.status==="confirmed").reduce((s,r)=>s+r.amount,0);
 const key=(value:string)=>value.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ");
 export function CustomersPanel({customers,orders,customerRecords,onSettleAvoir,onUpdateCustomer,invoices,onUpdateSupplierInvoice}:{customers:CustomerBalance[];orders:StoredOrder[];customerRecords:CustomerRecord[];onSettleAvoir:(orderId:string,avoirId:string)=>void;onUpdateCustomer:(customer:CustomerRecord)=>Promise<boolean>;invoices:SupplierInvoice[];onUpdateSupplierInvoice:(invoice:SupplierInvoice)=>void}){
- const [search,setSearch]=useState(""),[page,setPage]=useState(0),[selected,setSelected]=useState<string|null>(null),[editing,setEditing]=useState(false);
+ const [search,setSearch]=useState(""),[page,setPage]=useState(0),[selected,setSelected]=useState<string|null>(null),[editing,setEditing]=useState(false),[activeTab,setActiveTab]=useState<"clients"|"suppliers">("clients");
  const [editName,setEditName]=useState(""),[editPhone,setEditPhone]=useState(""),[editIce,setEditIce]=useState(""),[editRc,setEditRc]=useState("");
  const names=useMemo(()=>{const all=[...customerRecords.map(c=>c.name),...customers.map(c=>c.customer)];return [...new Map(all.map(name=>[key(name),name])).values()].sort((a,b)=>a.localeCompare(b,"fr"));},[customerRecords,customers]);
  const filtered=useMemo(()=>names.filter(name=>name.toLocaleLowerCase("fr").includes(search.trim().toLocaleLowerCase("fr"))),[names,search]);
@@ -20,8 +20,9 @@ export function CustomersPanel({customers,orders,customerRecords,onSettleAvoir,o
  const beginEdit=()=>{if(!record)return;setEditName(record.name);setEditPhone(record.phone);setEditIce(record.ice||"");setEditRc(record.rc||"");setEditing(true);};
  const saveEdit=async()=>{if(!record)return;const name=editName.trim(),phone=editPhone.trim();if(!name||!phone){alert("Le nom et le numéro de téléphone sont obligatoires.");return;}if(customerRecords.some(c=>c.id!==record.id&&key(c.name)===key(name))||orders.some(o=>key(o.customer)===key(name)&&key(o.customer)!==key(record.name))){alert("Un client porte déjà ce nom. Chaque nom de client doit être unique.");return;}const ok=await onUpdateCustomer({id:record.id,name,phone,...(editIce.trim()?{ice:editIce.trim()}:{}),...(editRc.trim()?{rc:editRc.trim()}:{})});if(ok){setSelected(name);setEditing(false);}};
  return <div className="content">
-  <div className="intro"><div><h2>Comptes clients</h2><p>Coordonnées, historique des commandes et situation des comptes clients.</p></div><span className="draft-count">{names.length} client(s)</span></div>
-  <SupplierAccountsPanel invoices={invoices} onUpdate={onUpdateSupplierInvoice}/>
+  <div className="intro"><div><h2>Clients et fournisseurs</h2><p>Consultez séparément les comptes clients et les comptes fournisseurs.</p></div><span className="draft-count">{activeTab==="clients"?names.length+" client(s)":invoices.length+" facture(s)"}</span></div>
+  <div className="panel caisse-tabs"><button className={"caisse-tab "+(activeTab==="clients"?"active":"")} onClick={()=>setActiveTab("clients")}>Compte client</button><button className={"caisse-tab "+(activeTab==="suppliers"?"active":"")} onClick={()=>setActiveTab("suppliers")}>Comptes fournisseur</button></div>
+  {activeTab==="suppliers"?<SupplierAccountsPanel invoices={invoices} onUpdate={onUpdateSupplierInvoice}/>:<>
   <section className="panel"><div className="panel-heading"><div><h3 style={{color:"#c6534b"}}>Client Avoir</h3><p>Les avoirs issus des modifications de commandes. Leur règlement ne crée aucune Sortie dans la caisse.</p></div><span className="draft-count">{avoirs.length} avoir(s)</span></div>
    {avoirs.length?avoirs.map(({order,avoir})=><div className="saved-draft" key={avoir.id}><div><strong>{order.customer} · {order.number}</strong><span>{avoir.date} · Avoir client en attente</span></div><strong>{money(avoir.amount)}</strong><button className="add-btn" onClick={()=>onSettleAvoir(order.id,avoir.id)}>Rembourser</button></div>):<div className="empty-inline">Aucun avoir client en attente.</div>}
   </section>
@@ -35,5 +36,6 @@ export function CustomersPanel({customers,orders,customerRecords,onSettleAvoir,o
     {statement.length?<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}><thead><tr>{["Date","N° CMD","État","Total TTC","Payé net","Reste"].map(x=><th key={x} style={{textAlign:["Date","N° CMD","État"].includes(x)?"left":"right",padding:9}}>{x}</th>)}</tr></thead><tbody>{statement.map(o=>{const paid=netPaid(o);return <tr key={o.id} style={{borderTop:"1px solid #e7ecee"}}><td style={{padding:9}}>{o.createdAt.slice(0,10)}</td><td style={{padding:9}}>{o.number}</td><td style={{padding:9}}>{o.status==="delivered"?"Livrée":"Annulée"}</td><td style={{padding:9,textAlign:"right"}}>{money(o.status==="delivered"?o.totalTTC:0)}</td><td style={{padding:9,textAlign:"right"}}>{money(paid)}</td><td style={{padding:9,textAlign:"right"}}>{money(Math.max(0,(o.status==="delivered"?o.totalTTC:0)-paid))}</td></tr>;})}</tbody></table></div>:<div className="empty-inline">Aucune commande enregistrée pour ce client.</div>}
    </div>}
   </section>
+  </>}
  </div>;
 }
