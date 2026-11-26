@@ -5,7 +5,7 @@ import type { StoredOrder } from "@/lib/workshop";
 type Method = "Espèces" | "Virement" | "Chèque" | "Effet" | "Remise";
 const money = (n: number) => new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD", maximumFractionDigits: 2 }).format(n);
 const remainingFor = (order: StoredOrder) => {
-  const paid = order.payments.filter(p => p.status !== "cancelled").reduce((s, p) => s + p.amount, 0);
+  const paid = order.payments.filter(p => p.status === "confirmed").reduce((s, p) => s + p.amount, 0);
   const refunded = order.refunds.filter(r => r.status === "confirmed").reduce((s, r) => s + r.amount, 0);
   return Math.max(0, order.totalTTC - paid + refunded);
 };
