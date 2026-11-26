@@ -11,12 +11,12 @@ export function summarizePayroll(week:PayrollWeek,employee:Employee,previousWeek
  let debt=0;
  for(const old of prior){
   const hours=old.attendance.reduce((s,d)=>s+nonnegative(d.hours),0);
-  const earned=employee.weeklySalary/(6*9)*hours;
+  const earned=employee.weeklySalary/(6*10.5)*hours;
   const advances=old.advances.reduce((s,a)=>s+nonnegative(a.amount),0);
   debt=Math.max(0,debt+advances-earned);
  }
  const hours=week.attendance.reduce((s,d)=>s+nonnegative(d.hours),0);
- const earned=employee.weeklySalary/(6*9)*hours;
+ const earned=employee.weeklySalary/(6*10.5)*hours;
  const advances=week.advances.reduce((s,a)=>s+nonnegative(a.amount),0);
  const payable=Math.max(0,earned-debt-advances);
  const paid=week.salaryPayments.reduce((s,p)=>s+nonnegative(p.amount),0);
@@ -39,7 +39,7 @@ export function derivePayrollMovements(weeks:PayrollWeek[],employees:Employee[])
   for(const week of employeeWeeks){
    const days=[...week.attendance].sort((a,b)=>a.date.localeCompare(b.date));
    const hours=days.reduce((sum,d)=>sum+nonnegative(d.hours),0);
-   const earned=employee.weeklySalary/(6*9)*hours;
+   const earned=employee.weeklySalary/(6*10.5)*hours;
    const advances=[...week.advances].sort((a,b)=>a.date.localeCompare(b.date));
    const advanceTotal=advances.reduce((sum,a)=>sum+nonnegative(a.amount),0);
    for(const advance of advances){

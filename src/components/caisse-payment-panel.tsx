@@ -23,7 +23,7 @@ export function CaissePaymentPanel({ orders, onRecordPayment }: {
   const [reference, setReference] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
-  const customerOrders = eligible.filter(o => o.customer.trim() === customer);
+  const customerOrders = eligible.filter(o => o.customer.trim().toLocaleLowerCase("fr") === customer.trim().toLocaleLowerCase("fr"));
   const selectedOrder = customerOrders.find(o => o.id === orderId) || customerOrders[0];
   const remaining = selectedOrder ? remainingFor(selectedOrder) : 0;
   const parsed = Number(amount);
@@ -33,9 +33,7 @@ export function CaissePaymentPanel({ orders, onRecordPayment }: {
     <div className="panel-heading"><div><h3>Encaisser un reste client</h3><p>Choisissez le client et sa commande, puis enregistrez le montant reçu.</p></div></div>
     {eligible.length === 0 ? <div className="empty-inline">Aucun reste à encaisser pour le moment.</div> : <>
       <div className="form-grid" style={{ gridTemplateColumns: "repeat(auto-fit,minmax(190px,1fr))", gap: 14 }}>
-        <label className="field"><span>Client</span><select className="text-input" value={customer} onChange={e => { setCustomer(e.target.value); setOrderId(""); setAmount(""); setReference(""); setDueDate(""); }}>
-          <option value="">Choisir un client</option>{customers.map(name => <option key={name} value={name}>{name}</option>)}
-        </select></label>
+        <label className="field"><span>Rechercher un client par nom</span><input className="text-input" list="caisse-customer-options" value={customer} onChange={e => { setCustomer(e.target.value); setOrderId(""); setAmount(""); setReference(""); setDueDate(""); }} placeholder="Tapez le nom du client..."/><datalist id="caisse-customer-options">{customers.map(name=><option key={name} value={name}/>)}</datalist></label>
         <label className="field"><span>Commande</span><select className="text-input" value={selectedOrder?.id || ""} onChange={e => { setOrderId(e.target.value); setAmount(""); }} disabled={!customerOrders.length}>
           {customerOrders.map(o => <option key={o.id} value={o.id}>{o.number} · Reste {money(remainingFor(o))}</option>)}
         </select></label>

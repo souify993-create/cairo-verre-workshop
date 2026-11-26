@@ -133,3 +133,23 @@
 .independent-invoice-line{display:grid;grid-template-columns:minmax(150px,2fr) repeat(3,minmax(80px,1fr)) auto 30px;align-items:end;gap:9px;padding:11px 0;border-top:1px solid #f0f2f3}
 .independent-invoice-line .field{min-width:0}
 @media(max-width:760px){.independent-invoice-line{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.independent-invoice-line .item-name{grid-column:1/-1}.independent-invoice-line .line-total{justify-self:end;align-self:center}.independent-invoice-line .icon-btn{justify-self:end}}
+
+/* Focused dialogs and print-only customer balances */
+.delivery-confirm-dialog,.supplier-payment-dialog{width:min(100%,560px);max-height:min(88vh,820px);overflow:auto}
+.delivery-confirm-dialog>p,.supplier-payment-dialog>p{margin:0 0 16px;color:var(--muted);font-size:12px;line-height:1.6}
+.delivery-confirm-total{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;margin:12px 0;border:1px solid #dce8f5;border-radius:10px;background:#f5f9fe;color:#526b86;font-size:12px}
+.delivery-confirm-total strong{font-size:16px;color:var(--ink)}
+.delivery-confirm-fields,.supplier-payment-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.delivery-confirm-fields .field,.supplier-payment-fields .field{min-width:0}
+.supplier-payment-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:14px 0;padding:12px;border:1px solid var(--line);border-radius:10px;background:#f8fbff}
+.supplier-payment-summary>div{display:grid;gap:5px;min-width:0}
+.supplier-payment-summary span{font-size:10px;color:var(--muted)}
+.supplier-payment-summary strong{font-size:12px;overflow-wrap:anywhere}
+.customer-pending-cheque{flex-basis:100%;color:#a66c19;font-weight:650}
+@media(max-width:560px){.delivery-confirm-fields,.supplier-payment-fields{grid-template-columns:1fr}.supplier-payment-summary{grid-template-columns:1fr}.supplier-payment-summary>div{display:flex;justify-content:space-between;gap:10px}}
+@media print{
+ body:has(.outstanding-list-panel) *{visibility:hidden!important}
+ body:has(.outstanding-list-panel) .outstanding-list-panel,body:has(.outstanding-list-panel) .outstanding-list-panel *{visibility:visible!important}
+ body:has(.outstanding-list-panel) .outstanding-list-panel{position:absolute;left:0;top:0;width:100%;margin:0!important;padding:12px!important;border:0!important}
+ body:has(.outstanding-list-panel) .outstanding-list-panel .print-hide{display:none!important}
+}
