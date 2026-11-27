@@ -177,6 +177,10 @@ where state.id = 1
     where not (item ? 'id')
   );
 
+-- Prevent cached pre-merge app sessions from replacing the entire JSON
+-- document after the new record-aware client has been rolled out.
+revoke execute on function public.save_workshop_state(jsonb, bigint) from authenticated;
+
 create or replace function public.save_workshop_state_merge(
   p_base_payload jsonb,
   p_payload jsonb
