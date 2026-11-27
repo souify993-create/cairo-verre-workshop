@@ -106,8 +106,13 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
     if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(invoiceDate) || Number.isNaN(new Date(`${invoiceDate}T00:00:00`).getTime())) { setError("Choisissez une date de facture valide."); return; }
     const now = new Date().toISOString();
     const previous = invoices.find(item => item.id === editingId);
+    let nextNumber = previous?.invoiceNumber || invoiceNumber;
+    if (!previous && invoices.some(item => item.invoiceNumber === nextNumber)) {
+      do { nextNumber = independentInvoiceNumber(); } while (invoices.some(item => item.invoiceNumber === nextNumber));
+      setInvoiceNumber(nextNumber);
+    }
     const record: IndependentInvoiceRecord = {
-      id: previous?.id || crypto.randomUUID(), invoiceNumber: previous?.invoiceNumber || invoiceNumber,
+      id: previous?.id || crypto.randomUUID(), invoiceNumber: nextNumber,
       invoiceDate, customer: { name: customer.name.trim(), phone: customer.phone.trim(), address: customer.address.trim(), ice: customer.ice.trim(), taxId: customer.taxId.trim() },
       lines: allocatedRows.map((row,index) => ({ id: lines[index].id, ...row })),
       totalTTC: Math.round(Number(total)*100)/100, createdAt: previous?.createdAt || now, updatedAt: now,
@@ -166,7 +171,7 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
       <label className="field" style={{maxWidth:420,marginBottom:14}}><span>Rechercher par numéro ou client</span><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Ex. FA1234 ou nom du client"/></label>
       {filteredInvoices.length===0?<div className="empty-inline">{search?"Aucune facture ne correspond à cette recherche.":"Aucune facture indépendante enregistrée pour le moment."}</div>:
       <div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontSize:12,minWidth:620}}><thead><tr>{["N° facture","Date","Client","Total TTC","Actions"].map(x=><th key={x} style={{textAlign:"left",padding:10,borderBottom:"1px solid #dce8f5"}}>{x}</th>)}</tr></thead><tbody>
-      {filteredInvoices.map(invoice=><tr key={invoice.id} style={{borderBottom:"1px solid #edf2f7"}}><td style={{padding:10,fontWeight:700}}>{invoice.invoiceNumber}</td><td style={{padding:10}}>{new Date(invoice.invoiceDate+"T00:00:00").toLocaleDateString("fr-FR")}</td><td style={{padding:10}}>{invoice.customer.name}</td><td style={{padding:10,fontWeight:700}}>{money(invoice.totalTTC)}</td><td style={{padding:10}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button className="add-btn" onClick={()=>loadInvoice(invoice)}>Ouvrir / modifier</button><button className="add-btn" onClick={()=>loadInvoice(invoice)}>Réimprimer</button></div></td></tr>)}
+      {filteredInvoices.map(invoice=><tr key={invoice.id} style={{borderBottom:"1px solid #edf2f7"}}><td style={{padding:10,fontWeight:700}}>{invoice.invoiceNumber}</td><td style={{padding:10}}>{new Date(invoice.invoiceDate+"T00:00:00").toLocaleDateString("fr-FR")}</td><td style={{padding:10}}>{invoice.customer.name}</td><td style={{padding:10,fontWeight:700}}>{money(invoice.totalTTC)}</td><td style={{padding:10}}><div style={{display:"flex",gap:6,flexWrap:"wrap"}}><button className="add-btn" onClick={()=>loadInvoice(invoice)}>Ouvrir / modifier</button><button className="add-btn" onClick={()=>loadInvoice(invoice)}>Ouvrir pour réimprimer</button></div></td></tr>)}
       </tbody></table></div>}
     </section>
   </div>;
