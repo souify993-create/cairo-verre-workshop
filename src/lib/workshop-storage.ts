@@ -8,7 +8,7 @@ export type SupplierPayment = { id: string; date: string; amount: number; method
 export type SupplierInvoice = {
   id: string; supplier: string; invoiceNumber: string; date: string;
   category: "glass" | "accessory" | "mixed"; lines: PurchaseLine[];
-  totalHT: number; totalTVA: number; totalTTC: number;
+  totalHT: number; totalTVA: number; totalTTC: number; discountPercent?: number;
   paidAmount: number; paymentMethod: PaymentMethod | "Non réglé";
   chequeNumber?: string; chequeDate?: string; paidDate?: string; payments?: SupplierPayment[];
 };
@@ -41,7 +41,7 @@ function validOrder(v: unknown): v is StoredOrder {
 }
 function validPurchase(v:unknown):v is AccessoryPurchase{return isRecord(v)&&text(v.accessoryId)&&text(v.label)&&amount(v.quantity)&&(v.id===undefined||text(v.id));}
 function validInvoice(v:unknown):v is SupplierInvoice {
- if(!isRecord(v)||!text(v.id)||!text(v.supplier)||!v.supplier.trim()||!text(v.invoiceNumber)||!v.invoiceNumber.trim()||!text(v.date)||!/^\d{4}-\d{2}-\d{2}$/.test(v.date)||!["glass","accessory","mixed"].includes(String(v.category))||!Array.isArray(v.lines)||v.lines.length===0||!amount(v.totalHT)||!amount(v.totalTVA)||!amount(v.totalTTC)||!amount(v.paidAmount)||v.paidAmount>v.totalTTC||!["Espèces","Virement","Chèque","Effet","Non réglé"].includes(String(v.paymentMethod))||(v.paidAmount>0&&v.paymentMethod==="Non réglé")||(v.paidDate!==undefined&&!/^\d{4}-\d{2}-\d{2}$/.test(String(v.paidDate)))||(v.payments!==undefined&&(!Array.isArray(v.payments)||!v.payments.every(p=>isRecord(p)&&text(p.id)&&text(p.date)&&/^\d{4}-\d{2}-\d{2}$/.test(p.date)&&amount(p.amount)&&p.amount>0&&cashMethods.includes(p.method as PaymentMethod)&&(p.status===undefined||["pending","confirmed","cancelled"].includes(String(p.status)))&&(p.dueDate===undefined||/^\d{4}-\d{2}-\d{2}$/.test(String(p.dueDate)))&&(p.reference===undefined||text(p.reference))))))return false;
+ if(!isRecord(v)||!text(v.id)||!text(v.supplier)||!v.supplier.trim()||!text(v.invoiceNumber)||!v.invoiceNumber.trim()||!text(v.date)||!/^\d{4}-\d{2}-\d{2}$/.test(v.date)||!["glass","accessory","mixed"].includes(String(v.category))||!Array.isArray(v.lines)||v.lines.length===0||!amount(v.totalHT)||!amount(v.totalTVA)||!amount(v.totalTTC)||(v.discountPercent!==undefined&&(!amount(v.discountPercent)||v.discountPercent>100))||!amount(v.paidAmount)||v.paidAmount>v.totalTTC||!["Espèces","Virement","Chèque","Effet","Non réglé"].includes(String(v.paymentMethod))||(v.paidAmount>0&&v.paymentMethod==="Non réglé")||(v.paidDate!==undefined&&!/^\d{4}-\d{2}-\d{2}$/.test(String(v.paidDate)))||(v.payments!==undefined&&(!Array.isArray(v.payments)||!v.payments.every(p=>isRecord(p)&&text(p.id)&&text(p.date)&&/^\d{4}-\d{2}-\d{2}$/.test(p.date)&&amount(p.amount)&&p.amount>0&&cashMethods.includes(p.method as PaymentMethod)&&(p.status===undefined||["pending","confirmed","cancelled"].includes(String(p.status)))&&(p.dueDate===undefined||/^\d{4}-\d{2}-\d{2}$/.test(String(p.dueDate)))&&(p.reference===undefined||text(p.reference))))))return false;
  if(v.paidAmount+(Array.isArray(v.payments)?v.payments.reduce((s,p)=>s+(isRecord(p)&&p.status!=="cancelled"&&amount(p.amount)?p.amount:0),0):0)>v.totalTTC)return false;
  return v.lines.every(x=>isRecord(x)&&text(x.label)&&x.label.trim().length>0&&amount(x.quantity)&&x.quantity>0&&amount(x.unitPrice)&&(x.widthMm===undefined||amount(x.widthMm))&&(x.heightMm===undefined||amount(x.heightMm)));
 }
