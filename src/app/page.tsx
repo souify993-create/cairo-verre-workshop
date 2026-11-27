@@ -146,9 +146,10 @@ export default function Home(){
     const decodedDrafts=decodeDraftStore(JSON.stringify(payload.drafts));
     const numbered=normalizeOrderNumbers(decodedDrafts,normalized.orders);
     const normalizedWithNumbers={...normalized,orders:numbered.orders,independentInvoices:normalized.independentInvoices||[]};
-    let revision=snapshot.revision;
-    if(numbered.changed)revision=await saveCloudWorkshop(supabase,{...normalizedWithNumbers,drafts:numbered.drafts},snapshot.revision);
-    cloudRevision.current=revision;
+    // Normalize legacy order numbers in memory only during startup.
+    // Do not write shared state while opening the app: concurrent sessions can
+    // otherwise race on the same revision and prevent the workspace from loading.
+    cloudRevision.current=snapshot.revision;
     setWorkshop(normalizedWithNumbers);
     setDrafts(numbered.drafts);
     writeWorkshopStore(normalizedWithNumbers);
