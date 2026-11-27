@@ -412,7 +412,7 @@ function printDraft(d:Pick<Draft,"number"|"customer"|"glass"|"services"|"accesso
    const linked=d.services.filter(s=>s.groupId&&s.groupId===key);
    const first=items[0];
    const serviceCodes=linked.map(s=>serviceShort(s.name));
-   const heading=(first.label||"Vitrage")+(serviceCodes.length?" · "+serviceCodes.join(" · "):"");
+   const heading=(first.label||"Vitrage")+(serviceCodes.length?" + "+serviceCodes.join(" + "):"");
    const dimensionRows=items.map(g=>'<tr><td>'+formatM(g.heightMm)+'L × '+formatM(g.widthMm)+'H</td><td class="num">'+g.quantity+'</td><td class="num">'+formatArea(areaM2(g.widthMm,g.heightMm,g.quantity))+'</td></tr>').join("");;
    grouped+='<section class="glass-card"><div class="glass-title">'+esc(heading)+'</div><table class="table"><thead><tr><th>Dimensions (m)</th><th class="num">Qté</th><th class="num">Surface (m²)</th></tr></thead><tbody>'+dimensionRows+'</tbody></table></section>';
   }
