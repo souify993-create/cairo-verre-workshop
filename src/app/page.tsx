@@ -210,7 +210,7 @@ export default function Home(){
     }catch(refreshError){
      setCloudError(refreshError instanceof Error?refreshError.message:"Impossible de recharger la dernière version.");
     }
-    alert("تم تحديث البيانات من الجهاز الآخر. هذا السجل بالذات تغيّر في نفس الوقت؛ راجع آخر نسخة ثم أعد العملية.");
+    alert("Les données ont été actualisées depuis l’autre appareil. Cet enregistrement a changé au même moment ; vérifiez la dernière version puis réessayez.");
    }else alert("Échec de l’enregistrement partagé : "+message);
    return false;
   }
