@@ -26,7 +26,7 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
   const print=()=>{const issue=validate();if(issue){setError(issue);return;}setError("");
     const win=window.open("","_blank","width=900,height=700");if(!win){setError("Autorisez les fenêtres contextuelles pour imprimer la facture.");return;}
     const date=new Date(invoiceDate+"T00:00:00").toLocaleDateString("fr-FR");
-    const lineHtml=lines.map(line=>`<tr><td>${esc(lineText(line))}</td></tr>`).join("");
+    const lineHtml=lines.map(line=>`<tr><td>${esc(line.designation||"—")}</td><td>${esc(line.dimensions||"—")}</td><td class="numeric">${esc(line.quantity||"—")}</td><td class="numeric">${esc(line.surface||"—")}</td><td class="numeric">${esc(line.unitPrice?line.unitPrice+" DH":"—")}</td><td class="numeric">${esc(line.amount?line.amount+" DH":"—")}</td></tr>`).join("");
     const logo=window.location.origin+"/cairo-verre-logo.svg";
     win.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Facture indépendante ${esc(invoiceNumber)}</title><style>
       *{box-sizing:border-box}@page{size:A4 portrait;margin:0}body{margin:0;font:10pt Arial,sans-serif;color:#17324f}.page{width:210mm;min-height:297mm;padding:14mm 15mm;margin:auto}
@@ -34,12 +34,12 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
       .company strong{display:block;font-size:19pt;color:#174b80;letter-spacing:1px}.company span{font-size:8pt;color:#367bb7;font-weight:bold}.company small{display:block;margin-top:2mm;font-size:8pt;line-height:1.5;color:#536b82}
       .title{text-align:right}.title h1{margin:0;color:#174b80;font-size:21pt}.title strong{display:block;margin-top:3mm;font-size:11pt}
       .meta{display:grid;grid-template-columns:1fr 1fr;gap:5mm;margin:8mm 0;padding:5mm;background:#eef5fc;border:1px solid #d6e6f6}.meta label{display:block;color:#71839a;font-size:8pt;margin-bottom:2mm}.meta strong{font-size:10pt}
-      h2{font-size:10pt;color:#174b80;border-bottom:1px solid #b9d2ed;padding-bottom:2mm;margin:9mm 0 3mm}table{width:100%;border-collapse:collapse;font-size:9pt}th{background:#eaf3fc;color:#174b80}th,td{border:1px solid #cbd9e7;padding:3mm;text-align:left}
+      h2{font-size:10pt;color:#174b80;border-bottom:1px solid #b9d2ed;padding-bottom:2mm;margin:9mm 0 3mm}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:8pt}th{background:#eaf3fc;color:#174b80;font-size:7.5pt}th,td{border:1px solid #cbd9e7;padding:2.2mm 1.8mm;text-align:left;vertical-align:top;overflow-wrap:anywhere}th:nth-child(1){width:25%}th:nth-child(2){width:19%}th:nth-child(3){width:10%}th:nth-child(4){width:12%}th:nth-child(5){width:16%}th:nth-child(6){width:18%}.numeric{text-align:right;white-space:normal}
       .totals{margin:10mm 0 0 auto;width:75mm;border:1px solid #d7e4f1;padding:3mm}.totals div{display:flex;justify-content:space-between;padding:2mm}.grand{border-top:2px solid #2563a6;color:#174b80;font-weight:bold;font-size:12pt}
       @media print{.page{margin:0;page-break-after:always}.page:last-child{page-break-after:auto}}
     </style></head><body><main class="page"><header><div class="brand"><img src="${logo}" alt="Cairo Verre"><div class="company"><strong>CAIRO VERRE</strong><span>VITRERIE · MIROITERIE</span><small>72, Lotissement Al Wiam, Rdc - Mediouna<br>ICE : 002843449000049 · RC : 507771</small></div></div><div class="title"><h1>FACTURE</h1><strong>${esc(invoiceNumber)}</strong><div>${date}</div></div></header>
       <section class="meta"><div><label>CLIENT</label><strong>${esc(customer.name)}</strong></div><div><label>TÉLÉPHONE</label><strong>${esc(customer.phone||"—")}</strong></div><div><label>ADRESSE</label><strong>${esc(customer.address||"—")}</strong></div><div><label>ICE / IF</label><strong>${esc([customer.ice&&"ICE : "+customer.ice,customer.taxId&&"IF : "+customer.taxId].filter(Boolean).join(" · ")||"—")}</strong></div></section>
-      <h2>DÉSIGNATION</h2><table><thead><tr><th>Désignation / Détails / Quantité / Surface / PU / Montant</th></tr></thead><tbody>${lineHtml}</tbody></table>
+      <h2>DÉSIGNATION</h2><table><thead><tr><th>Désignation</th><th>Dimensions</th><th>Quantité</th><th>Surface</th><th>PU (DH)</th><th>Montant (DH)</th></tr></thead><tbody>${lineHtml}</tbody></table>
       <section class="totals"><div><span>Total HT</span><strong>${money(totalHT)}</strong></div><div><span>TVA 20%</span><strong>${money(tva)}</strong></div><div class="grand"><span>Total TTC</span><strong>${money(totalTTC)}</strong></div></section></main></body></html>`);
     win.document.close();win.focus();window.setTimeout(()=>{if(!win.closed)win.print();},250);
   };
