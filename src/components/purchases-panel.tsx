@@ -9,13 +9,14 @@ const lineArea=(l:PurchaseLine)=>(l.kind==="glass"&&Number(l.widthMm)>0&&Number(
 const lineTotal=(l:PurchaseLine)=>(l.kind==="glass"?lineArea(l):l.quantity)*l.unitPrice;
 const round2=(n:number)=>Math.round((n+Number.EPSILON)*100)/100;
 
-export function PurchasesPanel({invoices,onAdd,onUpdate,glassCatalog,accessoryCatalog}:{invoices:SupplierInvoice[];onAdd:(invoice:SupplierInvoice)=>void;onUpdate:(invoice:SupplierInvoice)=>void;glassCatalog:readonly string[];accessoryCatalog:readonly string[]}){
+export function PurchasesPanel({invoices,onAdd,onUpdate,glassCatalog,accessoryCatalog}:{invoices:SupplierInvoice[];onAdd:(invoice:SupplierInvoice)=>void;onUpdate:(invoice:SupplierInvoice)=>Promise<boolean>;glassCatalog:readonly string[];accessoryCatalog:readonly string[]}){
  const [supplier,setSupplier]=useState(""); const [invoiceNumber,setInvoiceNumber]=useState(""); const [date,setDate]=useState(today());
  const [lines,setLines]=useState<PurchaseLine[]>([blankLine()]);
  const [discountPercent,setDiscountPercent]=useState(0);
  const [paidAmount,setPaidAmount]=useState(0);
  const [method,setMethod]=useState<"Espèces"|"Virement"|"Chèque"|"Effet"|"Non réglé">("Non réglé");
  const [chequeNumber,setChequeNumber]=useState(""),[chequeDate,setChequeDate]=useState(""),[paidDate,setPaidDate]=useState(today());
+ const [paymentInvoice,setPaymentInvoice]=useState<SupplierInvoice|null>(null),[paymentAmount,setPaymentAmount]=useState(""),[paymentMethod,setPaymentMethod]=useState<"Espèces"|"Virement"|"Chèque"|"Effet">("Espèces"),[paymentDate,setPaymentDate]=useState(today()),[paymentReference,setPaymentReference]=useState(""),[paymentDueDate,setPaymentDueDate]=useState(""),[paymentSaving,setPaymentSaving]=useState(false);
  const updateLine=(index:number,patch:Partial<PurchaseLine>)=>setLines(current=>current.map((line,i)=>i===index?{...line,...patch}:line));
  const totals=useMemo(()=>{
    const linesTTC=round2(lines.reduce((sum,line)=>sum+lineTotal(line),0));
@@ -27,15 +28,16 @@ export function PurchasesPanel({invoices,onAdd,onUpdate,glassCatalog,accessoryCa
  },[lines,discountPercent]);
  const addPayment=(invoice:SupplierInvoice)=>{
    const remaining=invoice.totalTTC-supplierInvoicePaid(invoice);if(remaining<=0)return;
-   const raw=window.prompt("Montant du règlement fournisseur (DH)",String(round2(remaining)));if(raw===null)return;
-   const amount=Number(raw);if(!Number.isFinite(amount)||amount<=0||amount>remaining){alert("Montant invalide ou supérieur au reste dû.");return;}
-   const methodRaw=window.prompt("Mode : Espèces, Virement, Chèque ou Effet","Espèces");if(methodRaw===null)return;
-   const paymentMethod=methodRaw.trim();if(!["Espèces","Virement","Chèque","Effet"].includes(paymentMethod)){alert("Mode de paiement invalide.");return;}
-   const paymentDate=window.prompt("Date du paiement (AAAA-MM-JJ)",today());if(paymentDate===null||!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)){alert("Date invalide.");return;}
-   let reference:string|undefined,dueDate:string|undefined;
-   if(paymentMethod==="Chèque"||paymentMethod==="Effet"){const refInput=window.prompt("Numéro du chèque / effet");if(!refInput?.trim())return;reference=refInput.trim();dueDate=window.prompt("Date d’échéance (AAAA-MM-JJ)",paymentDate)||undefined;if(!dueDate||!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)){alert("Date d’échéance invalide.");return;}}
-   const payment:SupplierPayment={id:crypto.randomUUID(),date:paymentDate,amount,method:paymentMethod as SupplierPayment["method"],status:paymentMethod==="Chèque"||paymentMethod==="Effet"?"pending":"confirmed",...(reference?{reference}:{}),...(dueDate?{dueDate}:{})};
-   onUpdate({...invoice,payments:[...(invoice.payments||[]),payment]});
+   setPaymentInvoice(invoice);setPaymentAmount(String(round2(remaining)));setPaymentMethod("Espèces");setPaymentDate(today());setPaymentReference("");setPaymentDueDate("");
+ };
+ const submitPayment=async()=>{
+   if(!paymentInvoice||paymentSaving)return;
+   const remaining=paymentInvoice.totalTTC-supplierInvoicePaid(paymentInvoice),amount=Number(paymentAmount);
+   if(!Number.isFinite(amount)||amount<=0||amount>remaining+0.009){alert("Montant invalide ou supérieur au reste dû.");return;}
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)||Number.isNaN(new Date(paymentDate+"T00:00:00").getTime())){alert("Date de paiement invalide.");return;}
+   if((paymentMethod==="Chèque"||paymentMethod==="Effet")&&(!paymentReference.trim()||!/^\d{4}-\d{2}-\d{2}$/.test(paymentDueDate))){alert("La référence et la date d’échéance sont obligatoires.");return;}
+   const payment:SupplierPayment={id:crypto.randomUUID(),date:paymentDate,amount,method:paymentMethod,status:paymentMethod==="Chèque"||paymentMethod==="Effet"?"pending":"confirmed",...((paymentMethod==="Chèque"||paymentMethod==="Effet")?{reference:paymentReference.trim(),dueDate:paymentDueDate}:{})};
+   setPaymentSaving(true);try{if(await onUpdate({...paymentInvoice,payments:[...(paymentInvoice.payments||[]),payment]}))setPaymentInvoice(null);}finally{setPaymentSaving(false);}
  };
  const validLines=lines.length>0&&lines.every(l=>l.label.trim()&&Number.isFinite(l.quantity)&&l.quantity>0&&Number.isFinite(l.unitPrice)&&l.unitPrice>=0&&(l.kind!=="glass"||(Number(l.widthMm)>0&&Number(l.heightMm)>0)));
  const submit=()=>{
@@ -66,5 +68,16 @@ export function PurchasesPanel({invoices,onAdd,onUpdate,glassCatalog,accessoryCa
  <button className="add-btn" style={{marginTop:16}} disabled={!supplier.trim()||!invoiceNumber.trim()||!validLines||discountPercent<0||discountPercent>100||paidAmount>totals.totalTTC||paidAmount<0||(paidAmount>0&&method==="Non réglé")||((method==="Chèque"||method==="Effet")&&paidAmount>0&&(!chequeNumber.trim()||!chequeDate))} onClick={submit}>Enregistrer la facture</button>
  </section>
  <section className="panel"><div className="panel-heading"><div><h3>Historique des factures</h3><p>Les montants enregistrés restent inchangés.</p></div></div>{invoices.length?[...invoices].sort((a,b)=>b.date.localeCompare(a.date)).map(x=><div className="saved-draft" key={x.id}><div><strong>{x.supplier} · {x.invoiceNumber}</strong><span>{x.date} · {x.lines.map(l=>l.label+" × "+l.quantity).join(", ")}{x.discountPercent? " · Remise "+x.discountPercent+"%":""}</span></div><div><strong>{money(x.totalTTC)}</strong><span>Payé {money(supplierInvoicePaid(x))} · Reste {money(Math.max(0,x.totalTTC-supplierInvoicePaid(x)))}</span><button className="add-btn" type="button" style={{marginTop:6}} onClick={()=>addPayment(x)}>Ajouter un règlement</button></div></div>):<div className="empty-inline">Aucune facture fournisseur.</div>}</section>
+ {paymentInvoice&&<div className="app-dialog-overlay" role="presentation" onClick={()=>{if(!paymentSaving)setPaymentInvoice(null);}}><section className="app-dialog supplier-payment-dialog" role="dialog" aria-modal="true" aria-labelledby="achat-supplier-payment-title" onClick={e=>e.stopPropagation()}>
+  <div className="app-dialog-icon success">↗</div><h3 id="achat-supplier-payment-title">Ajouter un règlement fournisseur</h3><p>{paymentInvoice.supplier} · Facture {paymentInvoice.invoiceNumber}</p>
+  <div className="supplier-payment-summary"><div><span>Total facture</span><strong>{money(paymentInvoice.totalTTC)}</strong></div><div><span>Déjà réglé</span><strong>{money(supplierInvoicePaid(paymentInvoice))}</strong></div><div><span>Reste dû</span><strong>{money(Math.max(0,paymentInvoice.totalTTC-supplierInvoicePaid(paymentInvoice)))}</strong></div></div>
+  <div className="supplier-payment-fields">
+   <label className="field"><span>Montant du règlement (DH) *</span><input className="text-input" type="number" min="0.01" max={Math.max(0,paymentInvoice.totalTTC-supplierInvoicePaid(paymentInvoice))} step="0.01" value={paymentAmount} onChange={e=>setPaymentAmount(e.target.value)}/></label>
+   <label className="field"><span>Mode de paiement *</span><select className="text-input" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value as typeof paymentMethod)}><option>Espèces</option><option>Virement</option><option>Chèque</option><option>Effet</option></select></label>
+   <label className="field"><span>Date du paiement *</span><input className="text-input" type="date" value={paymentDate} onChange={e=>setPaymentDate(e.target.value)}/></label>
+   {(paymentMethod==="Chèque"||paymentMethod==="Effet")&&<><label className="field"><span>Référence du {paymentMethod.toLocaleLowerCase("fr")} *</span><input className="text-input" value={paymentReference} onChange={e=>setPaymentReference(e.target.value)} placeholder="Numéro de référence"/></label><label className="field"><span>Date d’échéance *</span><input className="text-input" type="date" value={paymentDueDate} onChange={e=>setPaymentDueDate(e.target.value)}/></label></>}
+  </div>
+  <div className="app-dialog-actions"><button className="add-btn" disabled={paymentSaving} onClick={()=>setPaymentInvoice(null)}>Annuler</button><button className="add-btn app-dialog-primary" disabled={paymentSaving} onClick={submitPayment}>{paymentSaving?"Enregistrement…":"Enregistrer le règlement"}</button></div>
+ </section></div>}
  </div>;
 }
