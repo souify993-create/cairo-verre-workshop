@@ -22,7 +22,8 @@ import { PersonnelPanel } from "@/components/personnel-panel";
 import { AdminLogin } from "@/components/admin-login";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { ACCESSORY_CATALOG, GLASS_CATALOG, catalogKey } from "@/lib/catalog";
-import { loadCloudWorkshop, saveCloudWorkshop } from "@/lib/cloud-workshop";
+import { loadCloudWorkshop, saveCloudWorkshop, saveCloudWorkshopMerge } from "@/lib/cloud-workshop";
+import type { CloudWorkshopPayload } from "@/lib/cloud-workshop";
 import { serializeWorkshopBackup } from "@/lib/backup";
 import { IndependentInvoicePanel } from "@/components/independent-invoice-panel";
 // Temporary workshop test mode: local demo data only; switch off after feature QA and before admin rollout.
@@ -53,6 +54,7 @@ export default function Home(){
  const [authReady,setAuthReady]=useState(DEMO_MODE),[isAdmin,setIsAdmin]=useState(DEMO_MODE);
  const [cloudReady,setCloudReady]=useState(false),[cloudError,setCloudError]=useState("");
  const cloudRevision=useRef(0);
+ const cloudBase=useRef<CloudWorkshopPayload|null>(null);
  const [confirmation,setConfirmation]=useState<{title:string;message:string;confirmLabel:string;danger:boolean;kind:"confirm"|"info"|"success"|"warning"|"error"}|null>(null);
  const confirmationResolver=useRef<((value:boolean)=>void)|null>(null);
  const requestConfirmation=(message:string,title="Confirmer l’opération",confirmLabel="Confirmer",danger=false)=>new Promise<boolean>(resolve=>{confirmationResolver.current=resolve;setConfirmation({title,message,confirmLabel,danger,kind:"confirm"});});
@@ -100,7 +102,7 @@ export default function Home(){
  const cashPageCount=Math.max(1,Math.ceil(sortedCashMovements.length/20));
  const visibleCashMovements=sortedCashMovements.slice((Math.min(cashPage,cashPageCount)-1)*20,Math.min(cashPage,cashPageCount)*20);
  const scheduledChequeMovements=useMemo(()=>[...workshop.orders.flatMap(o=>o.payments.filter(p=>(p.method==="Chèque"||p.method==="Effet")&&p.status==="pending"&&p.dueDate).map(p=>({orderId:o.id,reference:o.number,method:p.method,direction:"Entrée" as const,amount:p.amount,kind:"Paiement" as const,counterparty:o.customer,date:p.dueDate}))),...workshop.supplierInvoices.flatMap(i=>(i.payments||[]).filter(p=>(p.method==="Chèque"||p.method==="Effet")&&p.status==="pending"&&p.dueDate).map(p=>({orderId:i.id,reference:p.reference||i.invoiceNumber,method:p.method,direction:"Sortie" as const,amount:p.amount,kind:"Achat fournisseur" as const,counterparty:i.supplier,date:p.dueDate})))],[workshop.orders,workshop.supplierInvoices]);
- useEffect(()=>{const loadedDrafts=readDrafts();const stored=readWorkshopStore();const known=new Set(stored.accessoryPurchases.map(item=>item.accessoryId));const openingStock=ACCESSORY_CATALOG.filter(label=>!known.has(catalogKey(label))).map(label=>({accessoryId:catalogKey(label),label,quantity:200}));const initialized={...stored,customers:stored.customers||[],independentInvoices:stored.independentInvoices||[],accessoryPurchases:[...stored.accessoryPurchases,...openingStock]};const numbered=normalizeOrderNumbers(loadedDrafts,initialized.orders);setDrafts(numbered.drafts);setWorkshop({...initialized,orders:numbered.orders});if(openingStock.length||numbered.changed)writeWorkshopStore({...initialized,orders:numbered.orders});if(numbered.changed)writeDrafts(numbered.drafts);},[]);
+ useEffect(()=>{const loadedDrafts=readDrafts();const stored=readWorkshopStore();const known=new Set(stored.accessoryPurchases.map(item=>item.accessoryId));const openingStock=ACCESSORY_CATALOG.filter(label=>!known.has(catalogKey(label))).map(label=>({id:crypto.randomUUID(),accessoryId:catalogKey(label),label,quantity:200}));const initialized={...stored,customers:stored.customers||[],independentInvoices:stored.independentInvoices||[],accessoryPurchases:[...stored.accessoryPurchases,...openingStock]};const numbered=normalizeOrderNumbers(loadedDrafts,initialized.orders);setDrafts(numbered.drafts);setWorkshop({...initialized,orders:numbered.orders});if(openingStock.length||numbered.changed)writeWorkshopStore({...initialized,orders:numbered.orders});if(numbered.changed)writeDrafts(numbered.drafts);},[]);
  useEffect(()=>{
   if(DEMO_MODE){setAuthReady(true);setIsAdmin(true);return;}
   const supabase=createSupabaseBrowserClient();
@@ -124,11 +126,12 @@ export default function Home(){
    try{
     let snapshot=await loadCloudWorkshop(supabase);
     if(!snapshot){
-     const localStore=readWorkshopStore();const numbered=normalizeOrderNumbers(readDrafts(),localStore.orders);const localPayload={...localStore,orders:numbered.orders,drafts:numbered.drafts};
+     const localStore=readWorkshopStore();const numbered=normalizeOrderNumbers(readDrafts(),localStore.orders);const localPurchases=localStore.accessoryPurchases.map(item=>({...item,id:item.id||crypto.randomUUID()}));const localPayload={...localStore,accessoryPurchases:localPurchases,orders:numbered.orders,drafts:numbered.drafts};
      try{
       const revision=await saveCloudWorkshop(supabase,localPayload,0);
       if(!active)return;
       cloudRevision.current=revision;
+      cloudBase.current=localPayload;
       setWorkshop({...localPayload,version:1});
       setDrafts(localPayload.drafts);
       setCloudReady(true);
@@ -150,6 +153,18 @@ export default function Home(){
     // Do not write shared state while opening the app: concurrent sessions can
     // otherwise race on the same revision and prevent the workspace from loading.
     cloudRevision.current=snapshot.revision;
+    cloudBase.current={
+     version:1,
+     orders:Array.isArray(payload.orders)?payload.orders:[],
+     accessoryPurchases:Array.isArray(payload.accessoryPurchases)?payload.accessoryPurchases:[],
+     supplierInvoices:Array.isArray(payload.supplierInvoices)?payload.supplierInvoices:[],
+     expenses:Array.isArray(payload.expenses)?payload.expenses:[],
+     employees:Array.isArray(payload.employees)?payload.employees:[],
+     payrollWeeks:Array.isArray(payload.payrollWeeks)?payload.payrollWeeks:[],
+     customers:Array.isArray(payload.customers)?payload.customers:[],
+     independentInvoices:Array.isArray(payload.independentInvoices)?payload.independentInvoices:[],
+     drafts:Array.isArray(payload.drafts)?payload.drafts:[],
+    } as CloudWorkshopPayload;
     setWorkshop(normalizedWithNumbers);
     setDrafts(numbered.drafts);
     writeWorkshopStore(normalizedWithNumbers);
@@ -171,18 +186,39 @@ export default function Home(){
   if(DEMO_MODE){setWorkshop(nextWorkshop);setDrafts(nextDrafts);setOrderPage(1);setCashPage(1);const a=writeWorkshopStore(nextWorkshop),b=writeDrafts(nextDrafts);if(!a||!b)alert("Enregistrement local impossible : vérifiez le stockage de cet appareil.");return a&&b;}
   if(!cloudReady){alert("Les données partagées ne sont pas encore prêtes. Réessayez dans un instant.");return false;}
   try{
-   const revision=await saveCloudWorkshop(createSupabaseBrowserClient(),{...nextWorkshop,drafts:nextDrafts},cloudRevision.current);
-   cloudRevision.current=revision;
-   setWorkshop(nextWorkshop);setDrafts(nextDrafts);
-   const workshopCached=writeWorkshopStore(nextWorkshop),draftsCached=writeDrafts(nextDrafts);
-   if(!workshopCached||!draftsCached)alert("Enregistrement cloud réussi, mais la copie locale de secours n’a pas pu être actualisée.");
+   const base=cloudBase.current;
+   if(!base)throw new Error("La base de synchronisation n’est pas initialisée. Rechargez la page.");
+   const proposed={...nextWorkshop,drafts:nextDrafts} as CloudWorkshopPayload;
+   const saved=await saveCloudWorkshopMerge(createSupabaseBrowserClient(),base,proposed);
+   // A slower response must never replace a newer snapshot already received
+   // by this tab from another in-flight save.
+   if(saved.revision>=cloudRevision.current){
+    cloudRevision.current=saved.revision;
+    cloudBase.current=saved.payload;
+    const mergedWorkshop=decodeWorkshopStore(JSON.stringify(saved.payload));
+    const mergedDrafts=decodeDraftStore(JSON.stringify(saved.payload.drafts));
+    setWorkshop(mergedWorkshop);setDrafts(mergedDrafts);
+    const workshopCached=writeWorkshopStore(mergedWorkshop),draftsCached=writeDrafts(mergedDrafts);
+    if(!workshopCached||!draftsCached)alert("Enregistrement cloud réussi, mais la copie locale de secours n’a pas pu être actualisée.");
+   }
    return true;
   }catch(error){
    const message=error instanceof Error?error.message:"Erreur de synchronisation.";
-   if(message.includes("REVISION_CONFLICT")||message.includes("40001")){
-    setCloudReady(false);
-    setCloudError("Une autre session a modifié les données. Rechargez la page pour récupérer la dernière version avant de réessayer.");
-    alert("Conflit de synchronisation : une autre session a modifié les données. Rechargez la page avant de réessayer.");
+   if(message.includes("RECORD_CONFLICT")||message.includes("40001")){
+    try{
+     const latest=await loadCloudWorkshop(createSupabaseBrowserClient());
+     if(latest){
+      cloudRevision.current=latest.revision;
+      cloudBase.current=latest.payload;
+      const latestWorkshop=decodeWorkshopStore(JSON.stringify(latest.payload));
+      const latestDrafts=decodeDraftStore(JSON.stringify(latest.payload.drafts));
+      setWorkshop(latestWorkshop);setDrafts(latestDrafts);
+      writeWorkshopStore(latestWorkshop);writeDrafts(latestDrafts);
+     }
+    }catch(refreshError){
+     setCloudError(refreshError instanceof Error?refreshError.message:"Impossible de recharger la dernière version.");
+    }
+    alert("تم تحديث البيانات من الجهاز الآخر. هذا السجل بالذات تغيّر في نفس الوقت؛ راجع آخر نسخة ثم أعد العملية.");
    }else alert("Échec de l’enregistrement partagé : "+message);
    return false;
   }
@@ -273,11 +309,11 @@ export default function Home(){
   const nextDrafts=drafts.map(d=>customerKey(d.customer)===customerKey(oldName)?{...d,customer:updated.name}:d);
   return persistCloudState({...workshop,customers,orders},nextDrafts);
  };
- const addAccessoryPurchase=async(purchase:{accessoryId:string;label:string;quantity:number})=>{if(!Number.isFinite(purchase.quantity)||purchase.quantity<=0)return;await saveWorkshop({...workshop,accessoryPurchases:[...workshop.accessoryPurchases,purchase]});};
+ const addAccessoryPurchase=async(purchase:{accessoryId:string;label:string;quantity:number})=>{if(!Number.isFinite(purchase.quantity)||purchase.quantity<=0)return;await saveWorkshop({...workshop,accessoryPurchases:[...workshop.accessoryPurchases,{...purchase,id:crypto.randomUUID()}]});};
  const addExpense=async(expense:ExpenseRecord)=>{await saveWorkshop({...workshop,expenses:[expense,...(workshop.expenses||[])]});};
  const updateSupplierInvoice=async(invoice:WorkshopStore["supplierInvoices"][number])=>{return saveWorkshop({...workshop,supplierInvoices:workshop.supplierInvoices.map(x=>x.id===invoice.id?invoice:x)});};
  const updateOrderRecord=async(order:StoredOrder)=>saveWorkshop({...workshop,orders:workshop.orders.map(x=>x.id===order.id?order:x)});
- const addSupplierInvoice=async(invoice:WorkshopStore["supplierInvoices"][number])=>{const additions=invoice.lines.filter(line=>line.kind==="accessory"||(line.kind===undefined&&invoice.category==="accessory")).map(line=>{const key=line.label.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"accessoire-sans-nom";return {accessoryId:key,label:line.label.trim(),quantity:line.quantity};});await saveWorkshop({...workshop,supplierInvoices:[invoice,...workshop.supplierInvoices],accessoryPurchases:[...workshop.accessoryPurchases,...additions]});};
+ const addSupplierInvoice=async(invoice:WorkshopStore["supplierInvoices"][number])=>{const additions=invoice.lines.filter(line=>line.kind==="accessory"||(line.kind===undefined&&invoice.category==="accessory")).map(line=>{const key=line.label.trim().toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"accessoire-sans-nom";return {id:crypto.randomUUID(),accessoryId:key,label:line.label.trim(),quantity:line.quantity};});await saveWorkshop({...workshop,supplierInvoices:[invoice,...workshop.supplierInvoices],accessoryPurchases:[...workshop.accessoryPurchases,...additions]});};
  const openDeliveryConfirmation=(draft:Draft)=>{setDeliveryConfirmationDraft(draft);setDeliveryCustomer(draft.customer||"");setDeliveryCustomerSuggestionsOpen(!draft.customer.trim());setDeliveryPaidAmount("");setDeliveryPaymentMethod("Espèces");setDeliveryChequeReference("");setDeliveryChequeDueDate("");};
  const confirmDeliveryFromList=async()=>{
   const draft=deliveryConfirmationDraft;if(!draft||deliverySaving)return;
