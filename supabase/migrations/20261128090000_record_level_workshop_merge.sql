@@ -177,9 +177,60 @@ where state.id = 1
     where not (item ? 'id')
   );
 
--- Prevent cached pre-merge app sessions from replacing the entire JSON
--- document after the new record-aware client has been rolled out.
-revoke execute on function public.save_workshop_state(jsonb, bigint) from authenticated;
+-- Keep the legacy RPC only for the first-ever insert. Cached clients that
+-- still submit full snapshots must not be able to replace an existing state.
+create or replace function public.save_workshop_state(
+  p_payload jsonb,
+  p_expected_revision bigint
+)
+returns table (revision bigint, updated_at timestamptz)
+language plpgsql
+security invoker
+set search_path = ''
+as $
+declare
+  v_revision bigint;
+  v_updated_at timestamptz;
+begin
+  if auth.uid() is null
+     or coalesce(auth.jwt() -> 'app_metadata' ->> 'role', '') <> 'admin'
+     or coalesce(auth.jwt() -> 'app_metadata' ->> 'application', '') <> 'cairo-verre' then
+    raise exception 'Admin access required' using errcode = '42501';
+  end if;
+
+  if p_expected_revision is null or p_expected_revision < 0 then
+    raise exception 'Invalid expected revision' using errcode = '22023';
+  end if;
+
+  if jsonb_typeof(p_payload) <> 'object'
+     or p_payload->>'version' <> '1'
+     or jsonb_typeof(p_payload->'orders') <> 'array'
+     or jsonb_typeof(p_payload->'accessoryPurchases') <> 'array'
+     or jsonb_typeof(p_payload->'supplierInvoices') <> 'array'
+     or jsonb_typeof(p_payload->'expenses') <> 'array'
+     or jsonb_typeof(p_payload->'employees') <> 'array'
+     or jsonb_typeof(p_payload->'payrollWeeks') <> 'array'
+     or jsonb_typeof(p_payload->'drafts') <> 'array' then
+    raise exception 'Invalid Cairo Verre workshop payload' using errcode = '22023';
+  end if;
+
+  insert into public.workshop_state (id, payload, revision, updated_by)
+  values (1, p_payload, 1, auth.uid())
+  on conflict (id) do nothing
+  returning public.workshop_state.revision, public.workshop_state.updated_at
+  into v_revision, v_updated_at;
+
+  if found then
+    return query select v_revision, v_updated_at;
+    return;
+  end if;
+
+  raise exception 'CLIENT_UPDATE_REQUIRED' using errcode = '55000';
+end;
+$;
+
+revoke all on function public.save_workshop_state(jsonb, bigint) from public, anon;
+grant execute on function public.save_workshop_state(jsonb, bigint) to authenticated;
 
 create or replace function public.save_workshop_state_merge(
   p_base_payload jsonb,
