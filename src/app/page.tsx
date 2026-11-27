@@ -202,7 +202,7 @@ export default function Home(){
     const updated=reviseDeliveredOrder(original,{customer, totalTTC:totals.ttc, lines:{glass,services:measuredServices,accessories}},selectedMethod);
     if(!await persistCloudState({...workshop,orders:workshop.orders.map(order=>order.id===original.id?updated:order)},drafts))return;
     setEditingDeliveredId(null);setEditingId(null);setCustomer("");setGlass([]);setServices([]);setAccessories([]);setSection("List commandes");
-    alert("تم تعديل الطلب المسلّم وتحديث الرصيد والمخزون.");
+    alert("La commande livrée a été modifiée et le solde ainsi que le stock ont été mis à jour.");
    }catch(error){alert(error instanceof Error?error.message:"Erreur lors de la modification.");}
    return;
   }
