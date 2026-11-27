@@ -22,7 +22,8 @@ import { PersonnelPanel } from "@/components/personnel-panel";
 import { AdminLogin } from "@/components/admin-login";
 import { createSupabaseBrowserClient } from "@/lib/supabase";
 import { ACCESSORY_CATALOG, GLASS_CATALOG, catalogKey } from "@/lib/catalog";
-import { loadCloudWorkshop, saveCloudWorkshop } from "@/lib/cloud-workshop";
+import { loadCloudWorkshop, saveCloudWorkshop, saveCloudWorkshopMerge } from "@/lib/cloud-workshop";
+import type { CloudWorkshopPayload } from "@/lib/cloud-workshop";
 import { serializeWorkshopBackup } from "@/lib/backup";
 import { IndependentInvoicePanel } from "@/components/independent-invoice-panel";
 // Temporary workshop test mode: local demo data only; switch off after feature QA and before admin rollout.
@@ -53,6 +54,7 @@ export default function Home(){
  const [authReady,setAuthReady]=useState(DEMO_MODE),[isAdmin,setIsAdmin]=useState(DEMO_MODE);
  const [cloudReady,setCloudReady]=useState(false),[cloudError,setCloudError]=useState("");
  const cloudRevision=useRef(0);
+ const cloudBase=useRef<CloudWorkshopPayload|null>(null);
  const [confirmation,setConfirmation]=useState<{title:string;message:string;confirmLabel:string;danger:boolean;kind:"confirm"|"info"|"success"|"warning"|"error"}|null>(null);
  const confirmationResolver=useRef<((value:boolean)=>void)|null>(null);
  const requestConfirmation=(message:string,title="Confirmer l’opération",confirmLabel="Confirmer",danger=false)=>new Promise<boolean>(resolve=>{confirmationResolver.current=resolve;setConfirmation({title,message,confirmLabel,danger,kind:"confirm"});});
@@ -129,6 +131,7 @@ export default function Home(){
       const revision=await saveCloudWorkshop(supabase,localPayload,0);
       if(!active)return;
       cloudRevision.current=revision;
+      cloudBase.current=localPayload;
       setWorkshop({...localPayload,version:1});
       setDrafts(localPayload.drafts);
       setCloudReady(true);
@@ -150,6 +153,18 @@ export default function Home(){
     // Do not write shared state while opening the app: concurrent sessions can
     // otherwise race on the same revision and prevent the workspace from loading.
     cloudRevision.current=snapshot.revision;
+    cloudBase.current={
+     version:1,
+     orders:Array.isArray(payload.orders)?payload.orders:[],
+     accessoryPurchases:Array.isArray(payload.accessoryPurchases)?payload.accessoryPurchases:[],
+     supplierInvoices:Array.isArray(payload.supplierInvoices)?payload.supplierInvoices:[],
+     expenses:Array.isArray(payload.expenses)?payload.expenses:[],
+     employees:Array.isArray(payload.employees)?payload.employees:[],
+     payrollWeeks:Array.isArray(payload.payrollWeeks)?payload.payrollWeeks:[],
+     customers:Array.isArray(payload.customers)?payload.customers:[],
+     independentInvoices:Array.isArray(payload.independentInvoices)?payload.independentInvoices:[],
+     drafts:Array.isArray(payload.drafts)?payload.drafts:[],
+    } as CloudWorkshopPayload;
     setWorkshop(normalizedWithNumbers);
     setDrafts(numbered.drafts);
     writeWorkshopStore(normalizedWithNumbers);
@@ -171,18 +186,39 @@ export default function Home(){
   if(DEMO_MODE){setWorkshop(nextWorkshop);setDrafts(nextDrafts);setOrderPage(1);setCashPage(1);const a=writeWorkshopStore(nextWorkshop),b=writeDrafts(nextDrafts);if(!a||!b)alert("Enregistrement local impossible : vérifiez le stockage de cet appareil.");return a&&b;}
   if(!cloudReady){alert("Les données partagées ne sont pas encore prêtes. Réessayez dans un instant.");return false;}
   try{
-   const revision=await saveCloudWorkshop(createSupabaseBrowserClient(),{...nextWorkshop,drafts:nextDrafts},cloudRevision.current);
-   cloudRevision.current=revision;
-   setWorkshop(nextWorkshop);setDrafts(nextDrafts);
-   const workshopCached=writeWorkshopStore(nextWorkshop),draftsCached=writeDrafts(nextDrafts);
-   if(!workshopCached||!draftsCached)alert("Enregistrement cloud réussi, mais la copie locale de secours n’a pas pu être actualisée.");
+   const base=cloudBase.current;
+   if(!base)throw new Error("La base de synchronisation n’est pas initialisée. Rechargez la page.");
+   const proposed={...nextWorkshop,drafts:nextDrafts} as CloudWorkshopPayload;
+   const saved=await saveCloudWorkshopMerge(createSupabaseBrowserClient(),base,proposed);
+   // A slower response must never replace a newer snapshot already received
+   // by this tab from another in-flight save.
+   if(saved.revision>=cloudRevision.current){
+    cloudRevision.current=saved.revision;
+    cloudBase.current=saved.payload;
+    const mergedWorkshop=decodeWorkshopStore(JSON.stringify(saved.payload));
+    const mergedDrafts=decodeDraftStore(JSON.stringify(saved.payload.drafts));
+    setWorkshop(mergedWorkshop);setDrafts(mergedDrafts);
+    const workshopCached=writeWorkshopStore(mergedWorkshop),draftsCached=writeDrafts(mergedDrafts);
+    if(!workshopCached||!draftsCached)alert("Enregistrement cloud réussi, mais la copie locale de secours n’a pas pu être actualisée.");
+   }
    return true;
   }catch(error){
    const message=error instanceof Error?error.message:"Erreur de synchronisation.";
-   if(message.includes("REVISION_CONFLICT")||message.includes("40001")){
-    setCloudReady(false);
-    setCloudError("Une autre session a modifié les données. Rechargez la page pour récupérer la dernière version avant de réessayer.");
-    alert("Conflit de synchronisation : une autre session a modifié les données. Rechargez la page avant de réessayer.");
+   if(message.includes("RECORD_CONFLICT")||message.includes("40001")){
+    try{
+     const latest=await loadCloudWorkshop(createSupabaseBrowserClient());
+     if(latest){
+      cloudRevision.current=latest.revision;
+      cloudBase.current=latest.payload;
+      const latestWorkshop=decodeWorkshopStore(JSON.stringify(latest.payload));
+      const latestDrafts=decodeDraftStore(JSON.stringify(latest.payload.drafts));
+      setWorkshop(latestWorkshop);setDrafts(latestDrafts);
+      writeWorkshopStore(latestWorkshop);writeDrafts(latestDrafts);
+     }
+    }catch(refreshError){
+     setCloudError(refreshError instanceof Error?refreshError.message:"Impossible de recharger la dernière version.");
+    }
+    alert("تم تحديث البيانات من الجهاز الآخر. هذا السجل بالذات تغيّر في نفس الوقت؛ راجع آخر نسخة ثم أعد العملية.");
    }else alert("Échec de l’enregistrement partagé : "+message);
    return false;
   }
