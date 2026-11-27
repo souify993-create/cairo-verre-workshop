@@ -153,18 +153,10 @@ export default function Home(){
     // Do not write shared state while opening the app: concurrent sessions can
     // otherwise race on the same revision and prevent the workspace from loading.
     cloudRevision.current=snapshot.revision;
-    cloudBase.current={
-     version:1,
-     orders:Array.isArray(payload.orders)?payload.orders:[],
-     accessoryPurchases:Array.isArray(payload.accessoryPurchases)?payload.accessoryPurchases:[],
-     supplierInvoices:Array.isArray(payload.supplierInvoices)?payload.supplierInvoices:[],
-     expenses:Array.isArray(payload.expenses)?payload.expenses:[],
-     employees:Array.isArray(payload.employees)?payload.employees:[],
-     payrollWeeks:Array.isArray(payload.payrollWeeks)?payload.payrollWeeks:[],
-     customers:Array.isArray(payload.customers)?payload.customers:[],
-     independentInvoices:Array.isArray(payload.independentInvoices)?payload.independentInvoices:[],
-     drafts:Array.isArray(payload.drafts)?payload.drafts:[],
-    } as CloudWorkshopPayload;
+    // Use only records accepted by the existing decoders as the editable base.
+    // Unknown legacy records remain untouched in the database rather than
+    // being interpreted as deletions by a later full-view save.
+    cloudBase.current={...normalized,drafts:decodedDrafts};
     setWorkshop(normalizedWithNumbers);
     setDrafts(numbered.drafts);
     writeWorkshopStore(normalizedWithNumbers);
@@ -194,9 +186,9 @@ export default function Home(){
    // by this tab from another in-flight save.
    if(saved.revision>=cloudRevision.current){
     cloudRevision.current=saved.revision;
-    cloudBase.current=saved.payload;
     const mergedWorkshop=decodeWorkshopStore(JSON.stringify(saved.payload));
     const mergedDrafts=decodeDraftStore(JSON.stringify(saved.payload.drafts));
+    cloudBase.current={...mergedWorkshop,drafts:mergedDrafts};
     setWorkshop(mergedWorkshop);setDrafts(mergedDrafts);
     const workshopCached=writeWorkshopStore(mergedWorkshop),draftsCached=writeDrafts(mergedDrafts);
     if(!workshopCached||!draftsCached)alert("Enregistrement cloud réussi, mais la copie locale de secours n’a pas pu être actualisée.");
@@ -209,9 +201,9 @@ export default function Home(){
      const latest=await loadCloudWorkshop(createSupabaseBrowserClient());
      if(latest){
       cloudRevision.current=latest.revision;
-      cloudBase.current=latest.payload;
       const latestWorkshop=decodeWorkshopStore(JSON.stringify(latest.payload));
       const latestDrafts=decodeDraftStore(JSON.stringify(latest.payload.drafts));
+      cloudBase.current={...latestWorkshop,drafts:latestDrafts};
       setWorkshop(latestWorkshop);setDrafts(latestDrafts);
       writeWorkshopStore(latestWorkshop);writeDrafts(latestDrafts);
      }
