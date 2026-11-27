@@ -187,7 +187,7 @@ returns table (revision bigint, updated_at timestamptz)
 language plpgsql
 security invoker
 set search_path = ''
-as $
+as $legacy_save$
 declare
   v_revision bigint;
   v_updated_at timestamptz;
@@ -227,7 +227,7 @@ begin
 
   raise exception 'CLIENT_UPDATE_REQUIRED' using errcode = '55000';
 end;
-$;
+$legacy_save$;
 
 revoke all on function public.save_workshop_state(jsonb, bigint) from public, anon;
 grant execute on function public.save_workshop_state(jsonb, bigint) to authenticated;
