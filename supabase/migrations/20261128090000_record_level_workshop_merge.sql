@@ -147,7 +147,35 @@ begin
 end;
 $$;
 
-revoke all on function public.merge_workshop_json_array(jsonb, jsonb, jsonb, text, text) from public, anon, authenticated;
+revoke all on function public.merge_workshop_json_array(jsonb, jsonb, jsonb, text, text) from public, anon;
+grant execute on function public.merge_workshop_json_array(jsonb, jsonb, jsonb, text, text) to authenticated;
+
+-- Accessory purchases are separate stock movements, not one row per
+-- accessory type. Give legacy movements stable IDs before merging by record.
+update public.workshop_state as state
+set payload = jsonb_set(
+      state.payload,
+      '{accessoryPurchases}',
+      coalesce((
+        select jsonb_agg(
+          case
+            when item ? 'id' then item
+            else item || jsonb_build_object('id', 'legacy-accessory-purchase:' || ordinal::text)
+          end
+          order by ordinal
+        )
+        from jsonb_array_elements(state.payload -> 'accessoryPurchases') with ordinality as items(item, ordinal)
+      ), '[]'::jsonb),
+      true
+    ),
+    revision = state.revision + 1,
+    updated_at = now()
+where state.id = 1
+  and exists (
+    select 1
+    from jsonb_array_elements(state.payload -> 'accessoryPurchases') as items(item)
+    where not (item ? 'id')
+  );
 
 create or replace function public.save_workshop_state_merge(
   p_base_payload jsonb,
@@ -208,7 +236,7 @@ begin
 
   v_merged := v_current || jsonb_build_object(
     'orders', public.merge_workshop_json_array(p_base_payload->'orders', p_payload->'orders', v_current->'orders', 'id', 'orders'),
-    'accessoryPurchases', public.merge_workshop_json_array(p_base_payload->'accessoryPurchases', p_payload->'accessoryPurchases', v_current->'accessoryPurchases', 'accessoryId', 'accessoryPurchases'),
+    'accessoryPurchases', public.merge_workshop_json_array(p_base_payload->'accessoryPurchases', p_payload->'accessoryPurchases', v_current->'accessoryPurchases', 'id', 'accessoryPurchases'),
     'supplierInvoices', public.merge_workshop_json_array(p_base_payload->'supplierInvoices', p_payload->'supplierInvoices', v_current->'supplierInvoices', 'id', 'supplierInvoices'),
     'expenses', public.merge_workshop_json_array(p_base_payload->'expenses', p_payload->'expenses', v_current->'expenses', 'id', 'expenses'),
     'employees', public.merge_workshop_json_array(p_base_payload->'employees', p_payload->'employees', v_current->'employees', 'id', 'employees'),
