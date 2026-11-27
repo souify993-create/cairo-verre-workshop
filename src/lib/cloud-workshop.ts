@@ -5,6 +5,21 @@ import type { WorkshopStore } from "@/lib/workshop-storage";
 export type CloudWorkshopPayload = WorkshopStore & { drafts: Draft[] };
 export type CloudWorkshopSnapshot = { payload: CloudWorkshopPayload; revision: number };
 
+export function normalizeCloudWorkshopPayload(value: Partial<CloudWorkshopPayload> | null | undefined): CloudWorkshopPayload {
+  return {
+    version: 1,
+    orders: Array.isArray(value?.orders) ? value.orders : [],
+    accessoryPurchases: Array.isArray(value?.accessoryPurchases) ? value.accessoryPurchases : [],
+    supplierInvoices: Array.isArray(value?.supplierInvoices) ? value.supplierInvoices : [],
+    expenses: Array.isArray(value?.expenses) ? value.expenses : [],
+    employees: Array.isArray(value?.employees) ? value.employees : [],
+    payrollWeeks: Array.isArray(value?.payrollWeeks) ? value.payrollWeeks : [],
+    customers: Array.isArray(value?.customers) ? value.customers : [],
+    independentInvoices: Array.isArray(value?.independentInvoices) ? value.independentInvoices : [],
+    drafts: Array.isArray(value?.drafts) ? value.drafts : [],
+  };
+}
+
 export function emptyCloudWorkshopPayload(): CloudWorkshopPayload {
   return {
     version: 1,
@@ -31,7 +46,7 @@ export async function loadCloudWorkshop(
   if (error) throw error;
   if (!data) return null;
   return {
-    payload: data.payload as CloudWorkshopPayload,
+    payload: normalizeCloudWorkshopPayload(data.payload as Partial<CloudWorkshopPayload>),
     revision: Number(data.revision),
   };
 }
