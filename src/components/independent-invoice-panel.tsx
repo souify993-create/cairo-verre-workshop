@@ -9,6 +9,13 @@ type Line = { id: string; label: string; widthMm: number; heightMm: number; quan
 const money = (n: number) => new Intl.NumberFormat("fr-MA", { style: "currency", currency: "MAD", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
 const esc = (value: string) => value.replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch] || ch));
 const fmt = (n: number) => (n / 1000).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const isValidInvoiceDate = (value: string) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]), month = Number(match[2]), day = Number(match[3]);
+  const date = new Date(year, month - 1, day);
+  return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+};
 
 type Props = { invoices: IndependentInvoiceRecord[]; onSave: (invoice: IndependentInvoiceRecord) => Promise<boolean> };
 export function IndependentInvoicePanel({ invoices, onSave }: Props) {
@@ -103,7 +110,7 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
     let allocatedRows;
     try { allocatedRows = allocateIndependentInvoiceTotal(lines, Number(total)); }
     catch (e) { setError(e instanceof Error ? e.message : "Vérifiez les lignes de vitrage."); return; }
-    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(invoiceDate) || Number.isNaN(new Date(`${invoiceDate}T00:00:00`).getTime())) { setError("Choisissez une date de facture valide."); return; }
+    if (!isValidInvoiceDate(invoiceDate)) { setError("Choisissez une date de facture valide."); return; }
     const now = new Date().toISOString();
     const previous = invoices.find(item => item.id === editingId);
     let nextNumber = previous?.invoiceNumber || invoiceNumber;
@@ -160,7 +167,7 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
       {error&&<p role="alert" style={{color:"#b84d45",fontSize:12}}>{error}</p>}
       <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
         <button className="save-btn" style={{flex:1}} onClick={save} disabled={saving}>{saving?"Enregistrement…":editingId?"Enregistrer les modifications":"Enregistrer la facture"}</button>
-        <button className="add-btn" type="button" onClick={print}>Imprimer la facture A4</button>
+        <button className="add-btn" type="button" onClick={print}>Imprimer la facture</button>
         {editingId&&<button className="add-btn" type="button" onClick={resetForm}>Nouvelle facture</button>}
       </div>
       {notice&&<p className="saved-note" role="status">{notice}</p>}
