@@ -14,14 +14,19 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
   const [editingId,setEditingId]=useState<string|null>(null); const [search,setSearch]=useState("");
   const [saving,setSaving]=useState(false); const [notice,setNotice]=useState(""); const [error,setError]=useState("");
   const [invoiceDate,setInvoiceDate]=useState(today);
-  const [lines,setLines]=useState<Array<{id:string;label:string}>>([{id:"line-1",label:""}]);
+  type ManualLine = {id:string; designation:string; dimensions:string; quantity:string; surface:string; unitPrice:string; amount:string};
+  const emptyLine = ():ManualLine => ({id:crypto.randomUUID(),designation:"",dimensions:"",quantity:"",surface:"",unitPrice:"",amount:""});
+  const [lines,setLines]=useState<ManualLine[]>([{id:"line-1",designation:"",dimensions:"",quantity:"",surface:"",unitPrice:"",amount:""}]);
   const totalTTC=Number(total); const totalHT=Math.round((totalTTC/1.2)*100)/100; const tva=Math.round((totalTTC-totalHT)*100)/100;
-  const updateLine=(id:string,label:string)=>setLines(current=>current.map(line=>line.id===id?{...line,label}:line));
-  const validate=()=>{if(!customer.name.trim())return "Le nom du client est obligatoire.";if(!lines.length||lines.some(line=>!line.label.trim()))return "Complétez la désignation de chaque ligne.";if(!total.trim()||!Number.isFinite(totalTTC)||totalTTC<=0)return "Saisissez un montant TTC valide.";if(!validDate(invoiceDate))return "Choisissez une date de facture valide.";return "";};
+  const updateLine=(id:string,field:keyof Omit<ManualLine,"id">,value:string)=>setLines(current=>current.map(line=>line.id===id?{...line,[field]:value}:line));
+  const encodeLine=(line:ManualLine)=>"__cv_manual_v1__"+JSON.stringify({designation:line.designation,dimensions:line.dimensions,quantity:line.quantity,surface:line.surface,unitPrice:line.unitPrice,amount:line.amount});
+  const decodeLine=(line:IndependentInvoiceRecord["lines"][number]):ManualLine=>{try{if(line.label.startsWith("__cv_manual_v1__")){const v=JSON.parse(line.label.slice("__cv_manual_v1__".length));return{id:line.id,designation:String(v.designation||""),dimensions:String(v.dimensions||""),quantity:String(v.quantity||""),surface:String(v.surface||""),unitPrice:String(v.unitPrice||""),amount:String(v.amount||"")};}}catch{}return{id:line.id,designation:line.label,dimensions:line.widthMm>1||line.heightMm>1?`${line.widthMm/1000} × ${line.heightMm/1000} m`:"",quantity:line.quantity>1?String(line.quantity):"",surface:line.weight>1?String(line.weight):"",unitPrice:"",amount:line.amount>0?String(line.amount):""};};
+  const lineText=(line:ManualLine)=>[line.designation,line.dimensions,line.quantity&&`Qté ${line.quantity}`,line.surface&&`Surface ${line.surface}`,line.unitPrice&&`PU ${line.unitPrice} DH`,line.amount&&`Montant ${line.amount} DH`].filter(Boolean).join(" · ");
+  const validate=()=>{if(!customer.name.trim())return "Le nom du client est obligatoire.";if(!lines.length||lines.some(line=>!line.designation.trim()))return "Saisissez la désignation de chaque ligne.";if(!total.trim()||!Number.isFinite(totalTTC)||totalTTC<=0)return "Saisissez un montant TTC valide.";if(!validDate(invoiceDate))return "Choisissez une date de facture valide.";return "";};
   const print=()=>{const issue=validate();if(issue){setError(issue);return;}setError("");
     const win=window.open("","_blank","width=900,height=700");if(!win){setError("Autorisez les fenêtres contextuelles pour imprimer la facture.");return;}
     const date=new Date(invoiceDate+"T00:00:00").toLocaleDateString("fr-FR");
-    const lineHtml=lines.map(line=>`<tr><td>${esc(line.label)}</td></tr>`).join("");
+    const lineHtml=lines.map(line=>`<tr><td>${esc(lineText(line))}</td></tr>`).join("");
     const logo=window.location.origin+"/cairo-verre-logo.svg";
     win.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Facture indépendante ${esc(invoiceNumber)}</title><style>
       *{box-sizing:border-box}@page{size:A4 portrait;margin:0}body{margin:0;font:10pt Arial,sans-serif;color:#17324f}.page{width:210mm;min-height:297mm;padding:14mm 15mm;margin:auto}
@@ -38,14 +43,14 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
       <section class="totals"><div><span>Total HT</span><strong>${money(totalHT)}</strong></div><div><span>TVA 20%</span><strong>${money(tva)}</strong></div><div class="grand"><span>Total TTC</span><strong>${money(totalTTC)}</strong></div></section></main></body></html>`);
     win.document.close();win.focus();window.setTimeout(()=>{if(!win.closed)win.print();},250);
   };
-  const reset=()=>{setCustomer({name:"",phone:"",address:"",ice:"",taxId:""});setTotal("");setInvoiceNumber(independentInvoiceNumber());setEditingId(null);setInvoiceDate(today());setLines([{id:crypto.randomUUID(),label:""}]);setError("");setNotice("");};
-  const load=(invoice:IndependentInvoiceRecord)=>{setCustomer({...invoice.customer});setTotal(String(invoice.totalTTC));setInvoiceNumber(invoice.invoiceNumber);setInvoiceDate(invoice.invoiceDate);setLines(invoice.lines.map(line=>({id:line.id,label:line.widthMm>1||line.heightMm>1?`${line.label} · ${line.widthMm/1000} × ${line.heightMm/1000} m · Qté ${line.quantity} · Surface ${line.weight.toLocaleString("fr-FR",{maximumFractionDigits:3})} m² · Montant ${money(line.amount)}`:line.label})));setEditingId(invoice.id);setError("");setNotice("Facture chargée. Vous pouvez la modifier puis l’enregistrer ou l’imprimer.");window.scrollTo({top:0,behavior:"smooth"});};
+  const reset=()=>{setCustomer({name:"",phone:"",address:"",ice:"",taxId:""});setTotal("");setInvoiceNumber(independentInvoiceNumber());setEditingId(null);setInvoiceDate(today());setLines([emptyLine()]);setError("");setNotice("");};
+  const load=(invoice:IndependentInvoiceRecord)=>{setCustomer({...invoice.customer});setTotal(String(invoice.totalTTC));setInvoiceNumber(invoice.invoiceNumber);setInvoiceDate(invoice.invoiceDate);setLines(invoice.lines.map(decodeLine));setEditingId(invoice.id);setError("");setNotice("Facture chargée. Vous pouvez la modifier puis l’enregistrer ou l’imprimer.");window.scrollTo({top:0,behavior:"smooth"});};
   const save=async()=>{const issue=validate();setError(issue);setNotice("");if(issue)return;
     const previous=invoices.find(item=>item.id===editingId);let number=previous?.invoiceNumber||invoiceNumber;
     if(!previous&&invoices.some(item=>item.invoiceNumber===number)){do{number=independentInvoiceNumber();}while(invoices.some(item=>item.invoiceNumber===number));setInvoiceNumber(number);}
     const now=new Date().toISOString();
     // Keep the existing persisted line shape for backward compatibility; independent invoice lines are now free-form descriptions.
-    const record:IndependentInvoiceRecord={id:previous?.id||crypto.randomUUID(),invoiceNumber:number,invoiceDate,customer:{name:customer.name.trim(),phone:customer.phone.trim(),address:customer.address.trim(),ice:customer.ice.trim(),taxId:customer.taxId.trim()},lines:lines.map(line=>({id:line.id,label:line.label.trim(),widthMm:1,heightMm:1,quantity:1,weight:1,amount:0})),totalTTC:Math.round(totalTTC*100)/100,createdAt:previous?.createdAt||now,updatedAt:now};
+    const record:IndependentInvoiceRecord={id:previous?.id||crypto.randomUUID(),invoiceNumber:number,invoiceDate,customer:{name:customer.name.trim(),phone:customer.phone.trim(),address:customer.address.trim(),ice:customer.ice.trim(),taxId:customer.taxId.trim()},lines:lines.map(line=>({id:line.id,label:encodeLine(line),widthMm:1,heightMm:1,quantity:1,weight:1,amount:0})),totalTTC:Math.round(totalTTC*100)/100,createdAt:previous?.createdAt||now,updatedAt:now};
     setSaving(true);try{const ok=await onSave(record);if(ok){setEditingId(record.id);setInvoiceNumber(record.invoiceNumber);setNotice(`Facture ${record.invoiceNumber} enregistrée avec succès.`);}else setError("La facture n’a pas pu être enregistrée. Vérifiez la connexion puis réessayez.");}catch{setError("Erreur lors de l’enregistrement de la facture.");}finally{setSaving(false);}
   };
   const filtered=[...invoices].sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).filter(item=>(item.invoiceNumber+" "+item.customer.name).toLocaleLowerCase("fr").includes(search.trim().toLocaleLowerCase("fr")));
@@ -61,8 +66,16 @@ export function IndependentInvoicePanel({ invoices, onSave }: Props) {
     <section className="panel"><div className="panel-heading"><div><h3>Référence et date de facture</h3><p>Le numéro est conservé lors des modifications.</p></div></div><div className="independent-invoice-grid">
       <label className="field"><span>Numéro de facture</span><input value={invoiceNumber} readOnly/></label><label className="field"><span>Date de facture *</span><input type="date" value={invoiceDate} onChange={e=>setInvoiceDate(e.target.value)}/></label>
     </div></section>
-    <section className="panel"><div className="panel-heading"><div><h3>Désignations</h3><p>Saisissez librement chaque ligne, par exemple : Clair 6 · 1,2 × 2,3 m · Qté 10 · 17 m² · PU 95 DH · Montant 16 000 DH.</p></div><button className="add-btn" onClick={()=>setLines(current=>[...current,{id:crypto.randomUUID(),label:""}])}>+ Ajouter une ligne</button></div>
-      {lines.map((line,index)=><div className="independent-invoice-line" key={line.id}><label className="field item-name"><span>Désignation et détails – ligne {index+1}</span><textarea rows={2} value={line.label} onChange={e=>updateLine(line.id,e.target.value)} placeholder="Saisir manuellement la désignation, dimensions, quantité, surface, PU et montant"/></label>{lines.length>1&&<button className="icon-btn danger" aria-label={"Supprimer la ligne "+(index+1)} onClick={()=>setLines(current=>current.filter(item=>item.id!==line.id))}>×</button>}</div>)}
+    <section className="panel"><div className="panel-heading"><div><h3>Désignations</h3></div><button className="add-btn" onClick={()=>setLines(current=>[...current,emptyLine()])}>+ Ajouter une ligne</button></div>
+      {lines.map((line,index)=><div className="independent-invoice-line" key={line.id} style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(130px,1fr))",gap:10,alignItems:"end",marginBottom:14}}>
+        <label className="field"><span>Désignation *</span><input value={line.designation} onChange={e=>updateLine(line.id,"designation",e.target.value)} placeholder="Type de verre"/></label>
+        <label className="field"><span>Dimensions</span><input value={line.dimensions} onChange={e=>updateLine(line.id,"dimensions",e.target.value)} placeholder="Dimensions"/></label>
+        <label className="field"><span>Quantité</span><input value={line.quantity} onChange={e=>updateLine(line.id,"quantity",e.target.value)} placeholder="Quantité"/></label>
+        <label className="field"><span>Surface</span><input value={line.surface} onChange={e=>updateLine(line.id,"surface",e.target.value)} placeholder="Surface"/></label>
+        <label className="field"><span>PU (DH)</span><input value={line.unitPrice} onChange={e=>updateLine(line.id,"unitPrice",e.target.value)} placeholder="Prix unitaire"/></label>
+        <label className="field"><span>Montant (DH)</span><input value={line.amount} onChange={e=>updateLine(line.id,"amount",e.target.value)} placeholder="Montant"/></label>
+        {lines.length>1&&<button className="icon-btn danger" aria-label={"Supprimer la ligne "+(index+1)} onClick={()=>setLines(current=>current.filter(item=>item.id!==line.id))}>×</button>}
+      </div>)}
     </section>
     <section className="panel"><div className="panel-heading"><div><h3>Récapitulatif de la facture</h3><p>Entrez uniquement le montant total TTC. Aucun calcul ou partage des montants entre les lignes.</p></div></div>
       <label className="field" style={{maxWidth:320}}><span>Total TTC (DH) *</span><input type="number" min="0.01" step="0.01" value={total} onChange={e=>setTotal(e.target.value)}/></label>
