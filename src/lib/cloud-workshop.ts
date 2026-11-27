@@ -48,3 +48,20 @@ export async function saveCloudWorkshop(
   if (error) throw error;
   return Number((data as { revision: number }).revision);
 }
+
+export async function saveCloudWorkshopMerge(
+  supabase: SupabaseClient,
+  basePayload: CloudWorkshopPayload,
+  payload: CloudWorkshopPayload,
+): Promise<CloudWorkshopSnapshot> {
+  const { data, error } = await supabase.rpc("save_workshop_state_merge", {
+    p_base_payload: basePayload,
+    p_payload: payload,
+  }).single();
+  if (error) throw error;
+  const saved = data as { revision: number; payload: CloudWorkshopPayload };
+  return {
+    payload: saved.payload,
+    revision: Number(saved.revision),
+  };
+}
