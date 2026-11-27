@@ -177,3 +177,26 @@
  body:has(.customer-statement) .customer-statement *,body:has(.supplier-statement) .supplier-statement *{visibility:visible!important}
  body:has(.customer-statement) .customer-statement .print-hide,body:has(.supplier-statement) .supplier-statement .print-hide{display:none!important}
 }
+
+
+/* Final print layout: show journal totals and omit empty payment methods */
+@media print{
+ body:has(.journalier-content) .journalier-totals{display:block!important;margin:0 0 8px!important;padding:8px 12px!important;border:1px solid #d8e1e9!important;break-inside:avoid!important;page-break-inside:avoid!important}
+ body:has(.journalier-content) .journalier-totals .summary-line{padding:3px 0!important;font-size:10px!important}
+ body:has(.journalier-content) .journalier-totals .total-box{margin:5px 0 0!important;padding:6px 9px!important}
+ body:has(.journalier-content) .journalier-method-section{margin:0 0 7px!important;padding:8px 10px!important}
+ body:has(.journalier-content) .journalier-method-section .panel-heading{margin-bottom:5px!important}
+ body:has(.journalier-content) .journalier-method-section .saved-draft{padding:4px 0!important}
+ body:has(.journalier-content) .journalier-method-section .empty-inline{padding:5px!important}
+ body:has(.customer-statement) .customer-statement,body:has(.supplier-statement) .supplier-statement{position:absolute!important;left:0!important;top:0!important;width:100%!important;margin:0!important;padding:0!important;border:0!important;display:block!important;visibility:visible!important}
+ body:has(.customer-statement) .customer-statement .panel-heading,body:has(.supplier-statement) .supplier-statement .panel-heading{margin:0 0 8px!important}
+ body:has(.customer-statement) .customer-statement .draft-actions,body:has(.supplier-statement) .supplier-statement .draft-actions{display:none!important}
+ body:has(.customer-statement) .customer-statement .customer-edit-panel,body:has(.supplier-statement) .supplier-statement .app-dialog-overlay{display:none!important}
+ body:has(.customer-statement) .customer-statement .customer-contact-card{padding:6px 0 10px!important}
+ body:has(.customer-statement) .customer-statement .customer-balance-line{padding:6px 0!important}
+ body:has(.customer-statement) .customer-statement table{font-size:10px!important}
+ body:has(.supplier-statement) .supplier-statement .saved-draft{padding:6px 0!important}
+}
+@media print{
+ body:has(.journalier-content) .journalier-content>.panel{break-inside:avoid;page-break-inside:avoid}
+}
