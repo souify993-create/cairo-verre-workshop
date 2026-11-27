@@ -14,6 +14,8 @@ export function emptyCloudWorkshopPayload(): CloudWorkshopPayload {
     expenses: [],
     employees: [],
     payrollWeeks: [],
+    customers: [],
+    independentInvoices: [],
     drafts: [],
   };
 }

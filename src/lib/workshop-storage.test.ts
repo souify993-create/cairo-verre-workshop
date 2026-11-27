@@ -21,9 +21,9 @@ test("workshop store reads valid orders and accessory purchases", () => {
 });
 
 test("workshop store rejects unsupported versions and malformed JSON", () => {
-  assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [], customers: [] });
+  assert.deepEqual(decodeWorkshopStore("{"), { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [], customers: [], independentInvoices: [] });
   assert.deepEqual(decodeWorkshopStore(JSON.stringify({ version: 2, orders: [delivered], accessoryPurchases: [] })),
-    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [], customers: [] });
+    { version: 1, orders: [], accessoryPurchases: [], supplierInvoices: [], expenses: [], employees: [], payrollWeeks: [], customers: [], independentInvoices: [] });
 });
 
 test("workshop store filters malformed order records", () => {
@@ -138,4 +138,10 @@ test("customer remission payment records are retained without changing other cas
   }));
   assert.equal(decoded.orders.length, 1);
   assert.equal(decoded.orders[0].payments[0].method, "Remise");
+});
+
+
+test("independent invoices default to an empty archive in older stores", () => {
+  const decoded = decodeWorkshopStore(JSON.stringify({ version: 1, orders: [], accessoryPurchases: [] }));
+  assert.deepEqual(decoded.independentInvoices, []);
 });
